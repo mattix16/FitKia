@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Fitkia - Diario alimentare e monitoraggio delle calorie">
+  <meta name="theme-color" content="#10B981">
+  <title>Fitkia</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind via CDN SOLO in sviluppo: in M4 lo sostituiremo con CSS compilato (vedi README) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+      colors: { ink:'#12201A', muted:'#55655E', track:'#E3EEE9', brand:'#10B981', deep:'#047857', tint:'#E3F6EE', canvas:'#F3F7F5' }
+    } } };
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .field-input { @apply w-full rounded-2xl border border-track bg-white px-4 py-3 text-base
+        placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand; }
+      .btn-primary { @apply w-full rounded-full bg-brand py-3.5 font-semibold text-white
+        hover:bg-deep focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2; }
+      .eating-button {@apply w-full bg-white rounded-3xl shadow-sm py-3.5 pl-[18px] 
+        pr-3.5 flex items-center gap-3 text-left;
+            }
+    }
+  </style>
+  <!-- type="module": file separati con import/export; è "defer" di default, quindi il DOM è già pronto -->
+  <script type="module" src="src/main.js"></script>
+</head>
+
+<body class="bg-canvas text-ink font-sans antialiased">
+
+  <!-- VISTA 1: onboarding. Parte nascosta: la mostra render() in main.js solo se manca il profilo -->
+  <section id="onboarding-section" class="hidden mx-auto max-w-md px-5 pt-14 pb-10">
+
+    <h1 class="text-2xl font-extrabold tracking-tight">Inserisci i tuoi dati</h1>
+    <p class="mt-1 text-sm text-muted">Li usiamo per calcolare il tuo fabbisogno giornaliero. Restano sul tuo dispositivo.</p>
+
+    <form id="onboarding-form" novalidate class="mt-6 flex flex-col gap-4">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Nome</span>
+        <input name="name" type="text" autocomplete="given-name" placeholder="Il tuo nome" class="field-input">
+        <p data-error-for="name" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Età</span>
+        <input name="age" type="number" inputmode="numeric" placeholder="Anni" class="field-input">
+        <p data-error-for="age" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Peso (kg)</span>
+        <input name="weightKg" type="number" step="0.1" inputmode="decimal" placeholder="Es. 72,5" class="field-input">
+        <p data-error-for="weightKg" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Altezza (cm)</span>
+        <input name="heightCm" type="number" inputmode="numeric" placeholder="Es. 175" class="field-input">
+        <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Sesso</span>
+        <select name="sex" class="field-input">
+          <option value="" selected disabled>Seleziona</option>
+          <option value="male">Maschio</option>
+          <option value="female">Femmina</option>
+        </select>       
+        <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
+      <button type="submit" class="btn-primary mt-2">Salva e inizia</button>
+    </form>
+  </section>
+
+  <!-- VISTA 2: dashboard -->
+  <section id="dashboard-section" class="hidden pb-32">
+    <header class="mx-auto max-w-md px-5 pt-14">
+      <p id="date-header" class="text-[13px] font-medium text-muted capitalize"></p>
+      <h1 id="welcome-header" class="mt-0.5 text-[26px] font-extrabold tracking-tight"></h1>
+    </header>
+
+    <main class="mx-auto flex max-w-md flex-col gap-4 px-5 pt-4">
+      <!-- Card calorie -->
+      <section aria-label="Calorie di oggi" class="flex items-center gap-5 rounded-[28px] bg-white p-[22px] shadow-md">
+        <div class="relative h-[150px] w-[150px] shrink-0">
+
+          <svg aria-hidden="true" class="-rotate-90" width="150" height="150" viewBox="0 0 150 150">
+            <circle cx="75" cy="75" r="64" fill="none" class="stroke-track" stroke-width="14"/>
+            <circle id="ring-progress" cx="75" cy="75" r="64" fill="none" class="stroke-brand" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 402.1"/>
+          </svg>
+
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <p id="kcal-remaining" class="text-3xl font-extrabold tracking-tighter">–</p>
+            <p id="kcal-remaining-label" class="text-xs font-semibold text-muted">kcal rimanenti</p>
+          </div>
+        </div>
+
+        <dl class="flex flex-1 flex-col gap-3.5">
+          <div><dt class="text-xs font-semibold text-muted">Obiettivo</dt>
+               <dd class="text-xl font-bold"><span id="kcal-goal">–</span> <span class="text-xs font-medium text-muted">kcal</span></dd></div>
+          <div><dt class="text-xs font-semibold text-muted">Consumate</dt>
+               <dd class="text-xl font-bold text-deep"><span id="kcal-eaten">–</span> <span class="text-xs font-medium text-muted">kcal</span></dd></div>
+        </dl>
+        
+      </section>
+
+      <!-- Macro e diario: il contenuto lo GENERA il JS da array di dati (niente markup copiato) -->
+      <section id="macros" aria-label="Macronutrienti" class="flex gap-4 rounded-3xl bg-white px-5 py-[18px] shadow-sm"></section>
+
+      <h2 class="mt-1.5 text-lg font-extrabold tracking-tight">Diario alimentare</h2>
+      <ul id="meal-list" class="flex flex-col gap-3"></ul>
+      
+    
+    </main>
+
+    <nav aria-label="Navigazione principale" class="fixed inset-x-0 bottom-0">
+      <div class="mx-auto flex max-w-md items-center justify-between rounded-t-[28px] bg-white px-3.5 pt-2.5 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_12px_rgba(18,32,26,0.06)]">
+        <a href="#home" aria-current="page" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-bold text-deep">Home</a>
+        <a href="#diary" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Diario</a>
+        <button type="button" aria-label="Aggiungi alimento" class="-mt-6 h-14 w-14 rounded-full bg-brand text-3xl leading-none text-white shadow-[0_6px_14px_rgba(16,185,129,0.35)]">+</button>
+        <a href="#settings" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Impost.</a>
+        <a href="#profile" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Profilo</a>
+        <!-- TODO: Mattia, rimetti le icone SVG della tua nav (sopra ogni etichetta, con aria-hidden="true") -->
+      </div>
+    </nav>
+  </section>
+
+</body>
+</html>
