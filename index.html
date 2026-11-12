@@ -22,9 +22,7 @@
         placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand; }
       .btn-primary { @apply w-full rounded-full bg-brand py-3.5 font-semibold text-white
         hover:bg-deep focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2; }
-      .eating-button {@apply w-full bg-white rounded-3xl shadow-sm py-3.5 pl-[18px] 
-        pr-3.5 flex items-center gap-3 text-left;
-            }
+      .eating-button { @apply w-full bg-white rounded-3xl shadow-sm py-3.5 pl-[18px] pr-3.5 flex items-center gap-3 text-left; }
     }
   </style>
   <!-- type="module": file separati con import/export; è "defer" di default, quindi il DOM è già pronto -->
@@ -115,7 +113,6 @@
 
       <h2 class="mt-1.5 text-lg font-extrabold tracking-tight">Diario alimentare</h2>
       <ul id="meal-list" class="flex flex-col gap-3"></ul>
-      
     
     </main>
 
@@ -123,7 +120,7 @@
       <div class="mx-auto flex max-w-md items-center justify-between rounded-t-[28px] bg-white px-3.5 pt-2.5 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_12px_rgba(18,32,26,0.06)]">
         <a href="#home" aria-current="page" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-bold text-deep">Home</a>
         <a href="#diary" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Diario</a>
-        <button type="button" aria-label="Aggiungi alimento" class="-mt-6 h-14 w-14 rounded-full bg-brand text-3xl leading-none text-white shadow-[0_6px_14px_rgba(16,185,129,0.35)]">+</button>
+        <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="-mt-6 h-14 w-14 rounded-full bg-brand text-3xl leading-none text-white shadow-[0_6px_14px_rgba(16,185,129,0.35)]">+</button>
         <a href="#settings" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Impost.</a>
         <a href="#profile" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Profilo</a>
         <!-- TODO: Mattia, rimetti le icone SVG della tua nav (sopra ogni etichetta, con aria-hidden="true") -->
@@ -131,5 +128,27 @@
     </nav>
   </section>
 
+  <!-- FINESTRA "aggiungi alimento": <dialog> è nativo (showModal/close, tasto Esc e focus gestiti dal browser) -->
+  <dialog id="food-dialog" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl p-0 shadow-xl backdrop:bg-black/40">
+    <div class="flex flex-col gap-4 p-5">
+      <div class="flex items-center justify-between">
+        <h2 id="food-dialog-title" class="text-lg font-extrabold tracking-tight"></h2>
+        <button id="food-close" type="button" aria-label="Chiudi" class="h-11 w-11 rounded-full bg-tint text-xl text-deep">✕</button>
+      </div>
+      <input id="food-search" type="search" placeholder="Cerca un alimento..." autocomplete="off" class="field-input">
+      <ul id="food-results" class="flex max-h-48 flex-col gap-2 overflow-y-auto"></ul>
+      <div id="food-picker" class="hidden flex flex-col gap-3">
+        <p id="food-selected" class="font-bold"></p>
+        <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Grammi</span>
+          <input id="food-grams" type="number" inputmode="decimal" value="100" class="field-input"></label>
+        <p id="food-preview" class="text-sm text-muted"></p>
+        <button id="food-add" type="button" class="btn-primary disabled:opacity-40">Aggiungi</button>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-muted">Già aggiunti</h3>
+        <ul id="food-entries" class="mt-2 flex flex-col gap-2"></ul>
+      </div>
+    </div>
+  </dialog>
 </body>
 </html>
