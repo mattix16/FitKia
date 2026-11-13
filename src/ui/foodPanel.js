@@ -2,7 +2,7 @@
 import { searchFoods } from '../data/foods.js';
 import { nutrientsFor } from '../nutrition.js';
 import { parseNumber } from '../validation.js';
-import { MEALS, LIMITS } from '../config.js';
+import { MEALS, LIMITS, MAX_RESULTS } from '../config.js';
 import { addFood, removeFood, getToday, subscribe } from '../store.js';
 
 const $ = id => document.getElementById(id);
@@ -19,7 +19,7 @@ const readGrams = () => {
 };
 
 async function showResults() {
-  results = await searchFoods($('food-search').value);
+  results = (await searchFoods($('food-search').value)).slice(0, MAX_RESULTS); // solo i primi: l'utente affina la ricerca
   $('food-results').innerHTML = results.map(food => `<li><button type="button" class="eating-button" data-food-id="${esc(food.id)}">
       <span class="flex-1 min-w-0 truncate">${esc(food.name)}</span>
       <span class="text-xs text-muted">${food.per100g.kcal} kcal/100 g</span></button></li>`).join('')

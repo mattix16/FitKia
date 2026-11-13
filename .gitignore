@@ -1,3 +1,5 @@
-mountMeals(document.getElementById('meal-list'), mealId => {
-  console.log('Pasto scelto:', mealId); // TODO: Mattia, qui aprirai il pannello di inserimento
-});
+node_modules/
+.DS_Store
+*.log
+.vscode/
+ 
