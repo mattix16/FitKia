@@ -1,62 +1,52 @@
-import { calculateTargets, calculateMacroTargets, ringDashArray } from '../nutrition.js';
+import { calculateTargets, calculateMacroTargets, ringDashArray, toPercent } from '../nutrition.js';
+import { dayTotals, emptyDay, todayKey } from '../log.js';
 import { renderMeals } from './meals.js';
-import { emptyDay } from '../log.js';
 
+const $ = id => document.getElementById(id);
+const setText = (id, text) => { $(id).textContent = text; };
 const fmt = new Intl.NumberFormat('it-IT');
-const setText = (id, text) => { document.getElementById(id).textContent = text; };
-const dateFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+const dateFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }); // creato una volta sola
+
+// Un array di dati + un solo template = niente markup copiato 3 volte. Le classi sono scritte INTERE (serve a Tailwind).
+const MACROS = [
+  { key: 'protein', label: 'Proteine',    colorClass: 'bg-sky-500' },
+  { key: 'carbs',   label: 'Carboidrati', colorClass: 'bg-brand' },
+  { key: 'fat',     label: 'Grassi',      colorClass: 'bg-amber-500' },
+];
 
 export function renderDashboard(state) {
-  const goal = calculateTargets(state.profile)[state.goal];
-  const eaten = 0; // TODO: Mattia, arriverà dai log dei pasti (nuovo modulo log.js + storage)
+  const { profile } = state;
+  const day = state.logs[todayKey()] ?? emptyDay();
+  const totals = dayTotals(day);                         // "consumate" è DERIVATO dal diario, non un numero a parte
+  const goal = calculateTargets(profile)[state.goal];
+  const eaten = totals.kcal;
+  const over = eaten > goal;
 
   setText('date-header', dateFmt.format(new Date()));
-  setText('welcome-header', `Ciao, ${state.profile.name}`);
+  setText('welcome-header', `Ciao, ${profile.name}`);     // textContent: il nome dell'utente non è mai HTML
   setText('kcal-goal', fmt.format(goal));
   setText('kcal-eaten', fmt.format(eaten));
-  setText('kcal-remaining', fmt.format(Math.abs(goal - eaten))); // l'unità è già nell'etichetta
+  setText('kcal-remaining', fmt.format(Math.abs(goal - eaten)));
+  setText('kcal-remaining-label', over ? 'kcal in eccesso' : 'kcal rimanenti');
 
+  const ring = $('ring-progress');
+  ring.setAttribute('stroke-dasharray', ringDashArray(eaten, goal));
+  ring.classList.toggle('stroke-red-500', over);         // toggle(classe, condizione): aggiunge o toglie
+  ring.classList.toggle('stroke-brand', !over);
 
-  document.getElementById('ring-progress').setAttribute('stroke-dasharray', ringDashArray(eaten, goal));
-  if (eaten > goal) {
-    document.getElementById('ring-progress').classList.remove('stroke-brand');
-    document.getElementById('ring-progress').classList.add('stroke-red-500');
-    setText('kcal-remaining-label', 'Kcal in eccesso');
-  }
+  renderMacros(totals, calculateMacroTargets(goal, profile.weightKg));
+  renderMeals($('meal-list'), day);
+}
 
-
-  const macroTargets = calculateMacroTargets(goal, state.profile.weightKg);
-  const macroEaten = { protein: 0, carbs: 0, fat: 0 }; // Placeholder per i dati futuri
-
-  // Creiamo un array strutturato con i dati necessari per stampare le 3 barre
-  const macrosData = [
-    { label: 'Proteine', goal: macroTargets.protein, eaten: macroEaten.protein, colorClass: 'bg-sky-500' },
-    { label: 'Carboidrati', goal: macroTargets.carbs, eaten: macroEaten.carbs, colorClass: 'bg-brand' },
-    { label: 'Grassi', goal: macroTargets.fat, eaten: macroEaten.fat, colorClass: 'bg-amber-500' }
-  ];
-
-    const day = emptyDay(); // TODO: Mattia, poi sarà state.logs[todayKey()] ?? emptyDay()
-    renderMeals(document.getElementById('meal-list'), day);
-
-  // 1. Calcolo percentuale sicuro (tra 0 e 100)
-  const toPercent = (eaten, goal) => {
-    if (goal <= 0) return 0;
-    return Math.min(Math.round((eaten / goal) * 100), 100);
-  };
-
-  // 2. Generazione del markup iterando sui dati
-  const htmlDelleBarre = macrosData.map(macro => `
-    <div class="flex-1 flex flex-col gap-1.5">
-      <span class="text-[13px] font-bold">${macro.label}</span>
-      <div role="progressbar" aria-label="${macro.label}" aria-valuemin="0"
-           aria-valuemax="${macro.goal}" aria-valuenow="${macro.eaten}" class="h-2 rounded bg-track">
-        <div class="h-2 rounded ${macro.colorClass}" style="width:${toPercent(macro.eaten, macro.goal)}%"></div>
+function renderMacros(totals, targets) {
+  $('macros').innerHTML = MACROS.map(({ key, label, colorClass }) => {
+    const eaten = Math.round(totals[key]);
+    return `<div class="flex-1 flex flex-col gap-1.5">
+      <span class="text-[13px] font-bold">${label}</span>
+      <div role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${targets[key]}" aria-valuenow="${eaten}" class="h-2 rounded bg-track">
+        <div class="h-2 rounded ${colorClass}" style="width:${toPercent(eaten, targets[key])}%"></div>
       </div>
-      <span class="text-xs font-medium text-muted"><b class="text-ink">${macro.eaten}</b> / ${macro.goal} g</span>
-    </div>
-  `).join('');
-  // 3. Iniezione nel DOM
-  document.getElementById('macros').innerHTML = htmlDelleBarre;
-
-
+      <span class="text-xs font-medium text-muted"><b class="text-ink">${eaten}</b> / ${targets[key]} g</span>
+    </div>`;
+  }).join('');
 }
