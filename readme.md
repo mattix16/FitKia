@@ -6,9 +6,7 @@
 > Stato del progetto: 🚧 in sviluppo (pre-alpha)
 
 <Todo assignee="Mattia">
-  Scrivi qui 2-3 frasi sul *perché* esiste Fitkia. Per chi è? Cosa la distingue da Lifesum o MyFitnessPal?
-  (Es. "tutti i dati restano sul dispositivo", "nessun account", "funziona senza rete"...)
-</Todo>
+ Un app free che si differenzia da tutte tenendo in locale tutti i dati.
 
 ## Indice
 
