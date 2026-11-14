@@ -25,6 +25,9 @@
         hover:bg-deep focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2; }
       .eating-button { @apply w-full bg-white rounded-3xl shadow-sm py-3.5 pl-[18px] pr-3.5 flex items-center gap-3 text-left; }
     }
+    /* Con la finestra aperta la pagina dietro non scorre. :has() legge lo stato nativo del <dialog>
+       ([open]), quindi funziona anche quando si chiude con Esc, senza codice JS. */
+    html:has(dialog[open]) { overflow: hidden; }
   </style>
   <!-- type="module": file separati con import/export; è "defer" di default, quindi il DOM è già pronto -->
   <script type="module" src="src/main.js"></script>
@@ -33,12 +36,12 @@
 <body class="bg-canvas text-ink font-sans antialiased">
 
   <!-- VISTA 1: onboarding. Parte nascosta: la mostra render() in main.js solo se manca il profilo -->
-  <section id="onboarding-section" class="hidden mx-auto max-w-md px-5 pt-14 pb-10">
+  <section id="onboarding-section" class=" hidden mx-auto max-w-md px-5 pt-14 pb-10">
 
     <h1 class="text-2xl font-extrabold tracking-tight">Inserisci i tuoi dati</h1>
     <p class="mt-1 text-sm text-muted">Li usiamo per calcolare il tuo fabbisogno giornaliero. Restano sul tuo dispositivo.</p>
 
-    <form id="onboarding-form" novalidate class="mt-6 flex flex-col gap-4">
+    <form id="onboarding-form" novalidate class=" mt-6 flex flex-col gap-4">
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Nome</span>
         <input name="name" type="text" autocomplete="given-name" placeholder="Il tuo nome" class="field-input">
@@ -73,12 +76,27 @@
         <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-red-700"></p>
       </label>
 
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Obiettivo</span>
+        <select name="goal" class="field-input"></select>
+        <p data-error-for="goal" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Livello di attività</span>
+        <select name="activity" class="field-input"></select>
+        <p data-error-for="activity" role="alert" class="min-h-5 text-sm text-red-700"></p>
+      </label>
+
       <button type="submit" class="btn-primary mt-2">Salva e inizia</button>
     </form>
   </section>
 
   <!-- VISTA 2: dashboard -->
-  <section id="dashboard-section" class="hidden pb-32">
+  <section id="app-section" class="hidden pb-32">
+
+    <!-- VISTA home (la dashboard di prima) -->
+    <section data-view="home" class="hidden">
     <header class="mx-auto max-w-md px-5 pt-14">
       <p id="date-header" class="text-[13px] font-medium text-muted capitalize"></p>
       <h1 id="welcome-header" class="mt-0.5 text-[26px] font-extrabold tracking-tight"></h1>
@@ -117,13 +135,66 @@
     
     </main>
 
+    </section>
+
+    <!-- VISTA diario: abitudini e storico (M3). Ogni scheda si riempie in un passo successivo. -->
+    <section data-view="diary" class="hidden mx-auto max-w-md px-5 pt-14">
+      <h1 class="text-[26px] font-extrabold tracking-tight">Diario</h1>
+      <div class="mt-4 flex flex-col gap-4">
+        <section id="history-card" aria-labelledby="history-title" class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 id="history-title" class="text-lg font-extrabold tracking-tight">Ultimi 3 giorni</h2>
+          <p class="mt-2 text-sm text-muted">In arrivo</p><!-- TODO: Mattia (passo 6) -->
+        </section>
+        <section id="water-card" aria-labelledby="water-title" class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 id="water-title" class="text-lg font-extrabold tracking-tight">Acqua</h2>
+          <p class="mt-2 text-sm text-muted">In arrivo</p><!-- TODO: Mattia (passo 4) -->
+        </section>
+        <section id="weight-card" aria-labelledby="weight-title" class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 id="weight-title" class="text-lg font-extrabold tracking-tight">Peso</h2>
+          <p class="mt-2 text-sm text-muted">In arrivo</p><!-- TODO: Mattia (passo 3) -->
+        </section>
+        <section id="supplements-card" aria-labelledby="supplements-title" class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 id="supplements-title" class="text-lg font-extrabold tracking-tight">Integratori</h2>
+          <p class="mt-2 text-sm text-muted">In arrivo</p><!-- TODO: Mattia (passo 5) -->
+        </section>
+      </div>
+    </section>
+
+    <!-- VISTA impostazioni (M3) -->
+    <section data-view="settings" class="hidden mx-auto max-w-md px-5 pt-14">
+      <h1 class="text-[26px] font-extrabold tracking-tight">Impostazioni</h1>
+      <div class="mt-4 flex flex-col gap-4">
+        <section id="goal-card" aria-labelledby="goal-title" class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 id="goal-title" class="text-lg font-extrabold tracking-tight">Obiettivo e attività</h2>
+          <form id="goal-form" novalidate class="mt-3 flex flex-col gap-3">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium">Obiettivo</span>
+              <select name="goal" class="field-input"></select>
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium">Livello di attività</span>
+              <select name="activity" class="field-input"></select>
+            </label>
+            <p id="goal-current" class="text-sm font-semibold text-deep"></p>
+            <p id="goal-error" role="alert" class="min-h-5 text-sm text-red-700"></p>
+            <p id="goal-status" role="status" class="min-h-5 text-sm text-deep"></p>
+            <button type="submit" class="btn-primary">Salva</button>
+          </form>
+        </section>
+        <section id="data-card" aria-labelledby="data-title" class="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 id="data-title" class="text-lg font-extrabold tracking-tight">I tuoi dati</h2>
+          <p class="mt-2 text-sm text-muted">In arrivo</p><!-- TODO: Mattia (passo 7): export e cancellazione -->
+        </section>
+      </div>
+    </section>
+
     <nav aria-label="Navigazione principale" class="fixed inset-x-0 bottom-0">
       <div class="mx-auto flex max-w-md items-center justify-between rounded-t-[28px] bg-white px-3.5 pt-2.5 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_12px_rgba(18,32,26,0.06)]">
-        <a href="#home" aria-current="page" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-bold text-deep">Home</a>
-        <a href="#diary" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Diario</a>
+        <a href="#home" data-nav="home" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-bold text-deep">Home</a>
+        <a href="#diary" data-nav="diary" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Diario</a>
         <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="-mt-6 h-14 w-14 rounded-full bg-brand text-3xl leading-none text-white shadow-[0_6px_14px_rgba(16,185,129,0.35)]">+</button>
-        <a href="#settings" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Impost.</a>
-        <a href="#profile" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Profilo</a>
+        <a href="#settings" data-nav="settings" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Impost.</a>
+        <a href="#profile" data-nav="profile" aria-disabled="true" class="flex h-[52px] w-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">Profilo</a>
         <!-- TODO: Mattia, rimetti le icone SVG della tua nav (sopra ogni etichetta, con aria-hidden="true") -->
       </div>
     </nav>
@@ -137,7 +208,7 @@
         <button id="food-close" type="button" aria-label="Chiudi" class="h-11 w-11 rounded-full bg-tint text-xl text-deep">✕</button>
       </div>
       <input id="food-search" type="search" placeholder="Cerca un alimento..." autocomplete="off" class="field-input">
-      <ul id="food-results" class="flex max-h-48 flex-col gap-2 overflow-y-auto"></ul>
+      <ul id="food-results" class="flex max-h-48 flex-col gap-2 overflow-y-auto overscroll-contain"></ul>
       <div id="food-picker" class="hidden flex flex-col gap-3">
         <p id="food-selected" class="font-bold"></p>
         <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Grammi</span>

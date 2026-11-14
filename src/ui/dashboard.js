@@ -5,6 +5,11 @@ import { renderMeals } from './meals.js';
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { $(id).textContent = text; };
 const fmt = new Intl.NumberFormat('it-IT');
+// Mette una delle due classi in base alla condizione (e toglie l'altra). toggle(classe, condizione) aggiunge o toglie.
+const swapClass = (el, condition, whenTrue, whenFalse) => {
+  el.classList.toggle(whenTrue, condition);
+  el.classList.toggle(whenFalse, !condition);
+};
 const dateFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }); // creato una volta sola
 
 // Un array di dati + un solo template = niente markup copiato 3 volte. Le classi sono scritte INTERE (serve a Tailwind).
@@ -31,8 +36,10 @@ export function renderDashboard(state) {
 
   const ring = $('ring-progress');
   ring.setAttribute('stroke-dasharray', ringDashArray(eaten, goal));
-  ring.classList.toggle('stroke-red-500', over);         // toggle(classe, condizione): aggiunge o toglie
-  ring.classList.toggle('stroke-brand', !over);
+  swapClass(ring, over, 'stroke-red-500', 'stroke-brand');
+  // Oltre l'obiettivo anche il numero e l'etichetta al centro diventano rossi.
+  swapClass($('kcal-remaining'), over, 'text-red-600', 'text-ink');
+  swapClass($('kcal-remaining-label'), over, 'text-red-600', 'text-muted');
 
   renderMacros(totals, calculateMacroTargets(goal, profile.weightKg));
   renderMeals($('meal-list'), day);

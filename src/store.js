@@ -1,17 +1,19 @@
 // Stato dell'app + pub/sub. La UI NON legge mai localStorage: passa da qui.
 import { STORAGE_KEYS } from './config.js';
 import { load, save } from './storage.js';
+import { normalizeProfile } from './profile.js';
 import { emptyDay, addEntry, removeEntry, makeEntry, todayKey } from './log.js';
 
 const listeners = new Set();
 // logs: { '2026-11-12': { breakfast: [...], lunch: [...], ... } }  (un giorno per chiave)
-let state = { profile: null, goal: 'lose', logs: {} };
+let state = { profile: null, logs: {}, view: 'home' };
 
 export const getState = () => state;
 export const getToday = () => state.logs[todayKey()] ?? emptyDay();
 
 export function hydrate() {
-  state = { ...state, profile: load(STORAGE_KEYS.profile), logs: load(STORAGE_KEYS.logs, {}) };
+  // normalizeProfile aggiunge i campi nuovi ai profili salvati prima di questa versione.
+  state = { ...state, profile: normalizeProfile(load(STORAGE_KEYS.profile)), logs: load(STORAGE_KEYS.logs, {}) };
 }
 
 export function setState(patch) {
@@ -19,6 +21,16 @@ export function setState(patch) {
   if ('profile' in patch) save(STORAGE_KEYS.profile, state.profile);
   if ('logs' in patch) save(STORAGE_KEYS.logs, state.logs);
   listeners.forEach(fn => fn(state));
+}
+
+/** Unico punto in cui un profilo entra nello stato: sempre "normalizzato". */
+export function saveProfile(profile) {
+  setState({ profile: normalizeProfile(profile) });
+}
+
+/** Cambia solo alcuni campi del profilo (es. { goal, activity }), tenendo gli altri. */
+export function updateProfile(patch) {
+  saveProfile({ ...state.profile, ...patch });
 }
 
 export function addFood(mealId, food, grams) {

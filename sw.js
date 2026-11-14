@@ -1,12 +1,12 @@
 // Service Worker di Fitkia. Cambia VERSION a ogni release: è ciò che fa arrivare gli aggiornamenti agli utenti.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `fitkia-${VERSION}`;
 
 // App shell: tutto ciò che serve per aprire l'app senza rete.
 const PRECACHE = [
   './', './index.html', './manifest.webmanifest',
   './src/main.js', './src/config.js', './src/nutrition.js', './src/validation.js',
-  './src/storage.js', './src/store.js', './src/log.js', './src/data/foods.js',
+  './src/storage.js', './src/store.js', './src/log.js', './src/router.js', './src/ui/nav.js', './src/data/foods.js',
   './src/ui/onboarding.js', './src/ui/dashboard.js', './src/ui/meals.js', './src/ui/foodPanel.js',
   './icons/icon-192.png', './icons/icon-512.png',
 ];

@@ -3,7 +3,21 @@ export const STORAGE_KEYS = { profile: 'fitkia:v1:profile', logs: 'fitkia:v1:log
 
 export const SEX_OFFSET = { male: 5, female: -161 };                       // Mifflin-St Jeor
 export const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 };
-export const GOALS = ['lose', 'maintain', 'gain'];
+// Gli id si salvano e non cambiano mai; label e hint servono solo alla UI (le <select> si generano da qui).
+export const GOAL_OPTIONS = [
+  { id: 'lose',     label: 'Perdere peso' },
+  { id: 'maintain', label: 'Mantenere il peso' },
+  { id: 'gain',     label: 'Aumentare di peso' },
+];
+export const GOALS = GOAL_OPTIONS.map(option => option.id); // derivato: non si può disallineare
+
+export const ACTIVITY_OPTIONS = [
+  { id: 'sedentary', label: 'Sedentario', hint: 'poco o nessun esercizio' },
+  { id: 'light',     label: 'Leggero',    hint: '1-3 allenamenti a settimana' },
+  { id: 'moderate',  label: 'Moderato',   hint: '3-5 allenamenti a settimana' },
+  { id: 'active',    label: 'Intenso',    hint: '6-7 allenamenti a settimana' },
+];
+export const DEFAULT_SETTINGS = { goal: 'lose', activity: 'sedentary' };
 
 export const LIMITS = {                                                    // altezza in CM
   age: { min: 16, max: 100 },
