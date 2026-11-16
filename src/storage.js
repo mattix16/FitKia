@@ -21,6 +21,10 @@ export function save(key, data) {
   }
 }
 
+export function remove(key) {
+  try { localStorage.removeItem(key); } catch { /* storage non disponibile: niente da cancellare */ }
+}
+
 function migrate(version, data) {
   // TODO: Mattia, quando cambierai lo schema (es. v1 -> v2) trasforma qui i vecchi dati.
   //       Idea: un `switch (version)` con fall-through, da v1 fino alla versione corrente.

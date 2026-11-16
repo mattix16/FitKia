@@ -23,7 +23,7 @@ export function renderDashboard(state) {
   const { profile } = state;
   const day = state.logs[todayKey()] ?? emptyDay();
   const totals = dayTotals(day);                         // "consumate" è DERIVATO dal diario, non un numero a parte
-  const goal = calculateTargets(profile)[state.goal];
+  const goal = calculateTargets(profile)[profile.goal];
   const eaten = totals.kcal;
   const over = eaten > goal;
 

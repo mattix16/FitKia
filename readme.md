@@ -32,12 +32,12 @@ Legenda: ✅ fatto · 🚧 in corso · ⬜ da fare
 - 🚧 Dashboard: anello calorie (obiettivo / consumate / rimanenti) e macro (proteine, carboidrati, grassi)
 - ⬜ Diario pasti: colazione, pranzo, cena, snack
 - ⬜ Ricerca alimenti nel dizionario locale con calcolo dinamico per grammatura
-- ⬜ Water tracker
-- ⬜ Weight log con storico
-- ⬜ Impostazioni (ricalcolo dei target)
+- ✅ Water tracker
+- ✅ Weight log con storico
+- ✅ Impostazioni (ricalcolo dei target)
 
 **Dopo l'MVP**
-- ⬜ To-do giornaliera integratori (es. creatina)
+- ✅ To-do giornaliera integratori (es. creatina)
 - ⬜ Integrazione Open Food Facts e scansione barcode
 - ⬜ Pacchetto Android (Capacitor)
 
@@ -167,7 +167,7 @@ Fitkia tratta dati sulla salute. Scelta di progetto: **tutto resta sul dispositi
 | **M0 Fondamenta** | README, `config`, `nutrition`, `validation`, `storage`, `store`, test | 🚧 |
 | **M1 Onboarding + Dashboard** | Form validato, persistenza, anello e macro dallo stato | ⬜ |
 | **M2 Diario** | Dizionario cibi, ricerca, grammatura, aggiunta al pasto | ⬜ |
-| **M3 Salute quotidiana** | Acqua, peso, impostazioni, to-do integratori | ⬜ |
+| **M3 Salute quotidiana** | Acqua, peso, impostazioni, to-do integratori | ✅ |
 | **M4 PWA vera** | Tailwind compilato, font locali, manifest, icone, SW completo | ⬜ |
 | **M5 Dati esterni** | Open Food Facts, barcode | ⬜ |
 | **M6 Android** | Capacitor, notifiche locali | ⬜ |

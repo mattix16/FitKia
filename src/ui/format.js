@@ -1,0 +1,17 @@
+// Formattazione per la UI (numeri e date in italiano). I formattatori si creano UNA volta: costruirli costa.
+const int = new Intl.NumberFormat('it-IT');
+const one = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const liters = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 });
+const shortDate = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
+const weekdayDate = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'short' });
+
+// 'YYYY-MM-DD' -> Date locale (new Date('2026-11-12') sarebbe in UTC e potrebbe slittare di giorno)
+const parseKey = key => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d); };
+
+export const formatInt = n => int.format(n);
+export const formatDecimal = n => one.format(n);
+export const formatLiters = ml => `${liters.format(ml / 1000)} L`;
+export const formatShortDate = key => shortDate.format(parseKey(key));
+export const formatDayLabel = (key, index) => (index === 0 ? 'Oggi' : index === 1 ? 'Ieri' : weekdayDate.format(parseKey(key)));
+/** +0,3 / −0,6 / 0,0 (con il segno meno vero, non il trattino) */
+export const formatSigned = n => `${n > 0 ? '+' : n < 0 ? '−' : ''}${one.format(Math.abs(n))}`;

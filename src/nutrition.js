@@ -47,3 +47,10 @@ export function nutrientsFor(food, grams) {
 
 /** Percentuale intera tra 0 e 100 (per le barre dei macro). */
 export const toPercent = (value, goal) => (goal <= 0 ? 0 : Math.min(100, Math.round((value / goal) * 100)));
+
+/** Valori per 100 g fisicamente plausibili: macro <= 100 g e kcal vicine a 4P + 4C + 9F
+ *  (tolleranza per fibre, alcol e arrotondamenti). Serve a bloccare errori di battitura. */
+export function isPlausibleFood({ kcal, protein, carbs, fat }) {
+  const atwater = 4 * protein + 4 * carbs + 9 * fat;
+  return protein + carbs + fat <= 100.5 && Math.abs(atwater - kcal) <= 0.25 * Math.max(atwater, kcal) + 15;
+}

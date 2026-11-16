@@ -1,2 +1,10 @@
-{ "name": "fitkia", "private": true, "type": "module",
-  "scripts": { "test": "node --test", "dev": "npx serve ." } }
+{
+  "name": "fitkia",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "npx serve .",
+    "e2e": "node e2e/browser.cjs"
+  }
+}

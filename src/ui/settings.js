@@ -1,9 +1,9 @@
 // Pagina Impostazioni. Come foodPanel: mount (eventi, UNA volta) e render (aggiorna la vista, tante volte).
-import { GOAL_OPTIONS, ACTIVITY_OPTIONS } from './config.js';
-import { calculateTargets, calculateMacroTargets } from './nutrition.js';
-import { validateGoalSettings, validateProfile } from './validation.js';
-import { buildBackup, backupFileName } from './backup.js';
-import { getState, updateProfile, resetAll } from './store.js';
+import { GOAL_OPTIONS, ACTIVITY_OPTIONS } from '../config.js';
+import { calculateTargets, calculateMacroTargets } from '../nutrition.js';
+import { validateGoalSettings, validateProfile } from '../validation.js';
+import { buildBackup, backupFileName, parseBackup, describeBackup } from '../backup.js';
+import { getState, updateProfile, resetAll, restoreAll } from '../store.js';
 import { fillOptions, showFieldErrors, flashStatus } from './forms.js';
 import { formatInt } from './format.js';
 
@@ -52,6 +52,28 @@ export function mountSettings() {
     if (!ok) return;
     updateProfile(value);                                  // i target si ricalcolano perché dipendono dal profilo
     flashStatus($('personal-status'), 'Salvato ✓');
+  });
+
+  // --- import: legge il file, lo CONTROLLA (parseBackup) e chiede conferma prima di sostituire i dati
+  let pending = null;
+  $('import-button').addEventListener('click', () => { $('import-error').textContent = ''; $('import-file').click(); });
+  $('import-file').addEventListener('change', async event => {
+    const file = event.target.files[0];
+    event.target.value = '';                               // così si può scegliere di nuovo lo stesso file
+    if (!file) return;
+    const result = parseBackup(await file.text());
+    $('import-error').textContent = result.ok ? '' : result.error;
+    if (!result.ok) return;
+    pending = result.data;
+    $('import-summary').textContent = describeBackup(pending);
+    $('import-dialog').showModal();
+  });
+  $('import-cancel').addEventListener('click', () => { pending = null; $('import-dialog').close(); });
+  $('import-confirm').addEventListener('click', () => {
+    restoreAll(pending);                                   // un solo setState: un solo salvataggio e un solo render
+    pending = null;
+    $('import-dialog').close();
+    flashStatus($('import-status'), 'Dati ripristinati ✓');
   });
 
   // --- export e cancellazione
