@@ -35,7 +35,7 @@ async function showResults() {
       <button type="button" class="eating-button flex-1 min-w-0" data-food-id="${esc(food.id)}">
         <span class="flex-1 min-w-0 truncate">${esc(food.name)}${food.custom ? ' <span class="text-xs font-semibold text-deep">· tuo</span>' : ''}</span>
         <span class="text-xs text-muted">${food.per100g.kcal} kcal/100 g</span></button>
-      ${food.custom ? `<button type="button" data-delete-food-id="${esc(food.id)}" aria-label="Elimina ${esc(food.name)}" class="h-11 w-11 shrink-0 rounded-full bg-tint text-deep">✕</button>` : ''}</li>`).join('')
+      ${food.custom ? `<button type="button" data-delete-food-id="${esc(food.id)}" aria-label="Elimina ${esc(food.name)}" class="h-11 w-11 shrink-0 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button>` : ''}</li>`).join('')
     || '<li class="text-sm text-muted">Nessun risultato: puoi aggiungere un alimento tuo qui sotto.</li>';
   renderQuick();
 }
@@ -54,11 +54,11 @@ function renderQuick() {
   // Nomi scelti dall'utente: SEMPRE escapeHtml prima di innerHTML (anche negli aria-label).
   $('food-favorites').innerHTML = favorites.map(f => `<li class="flex items-center gap-2">
       <button type="button" data-favorite-id="${esc(f.id)}" aria-label="Aggiungi il preferito ${esc(f.name)}: ${formatFoodCount(f.items.length)}, ${favoriteKcal(f)} kcal"
-        class="flex min-h-11 flex-1 items-center gap-3 rounded-2xl border border-line/70 bg-canvas px-4 text-left transition active:scale-[.98]">
+        class="flex min-h-11 flex-1 items-center gap-3 hairline rounded-xl bg-tint/60 px-4 text-left transition active:scale-[.98]">
         <span aria-hidden="true" class="text-amber-500">★</span>
         <span class="min-w-0 flex-1 truncate text-sm font-semibold">${esc(f.name)}</span>
         <span class="text-xs text-muted">${f.items.length} · ${favoriteKcal(f)} kcal</span></button>
-      <button type="button" data-delete-favorite-id="${esc(f.id)}" aria-label="Elimina il preferito ${esc(f.name)}" class="h-11 w-11 shrink-0 rounded-full bg-tint text-deep">✕</button></li>`).join('');
+      <button type="button" data-delete-favorite-id="${esc(f.id)}" aria-label="Elimina il preferito ${esc(f.name)}" class="h-11 w-11 shrink-0 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`).join('');
 
   const count = yesterdayCount(currentMeal);
   $('food-repeat').classList.toggle('hidden', count === 0);
@@ -78,10 +78,10 @@ function showPreview() {
 
 function renderEntries() {
   const entries = getToday()[currentMeal] ?? [];
-  $('food-entries').innerHTML = entries.map(e => `<li class="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-2.5">
+  $('food-entries').innerHTML = entries.map(e => `<li class="flex items-center gap-3 rounded-xl bg-tint/60 px-4 py-2.5">
       <span class="flex-1 min-w-0 truncate text-sm">${esc(e.name)} · ${e.grams} g</span>
       <span class="text-sm font-bold">${e.kcal} kcal</span>
-      <button type="button" data-entry-id="${esc(e.id)}" aria-label="Rimuovi ${esc(e.name)}" class="h-11 w-11 rounded-full bg-tint text-deep">✕</button></li>`).join('')
+      <button type="button" data-entry-id="${esc(e.id)}" aria-label="Rimuovi ${esc(e.name)}" class="h-11 w-11 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`).join('')
     || '<li class="text-sm text-muted">Nessun alimento aggiunto</li>';
 
   // "Salva come preferito" ha senso solo se il pasto ha qualcosa dentro.

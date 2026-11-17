@@ -4,61 +4,71 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Fitkia - Diario alimentare e monitoraggio delle calorie">
-  <meta name="theme-color" content="#F3F7F5" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0E1411" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <title>Fitkia</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Tailwind via CDN SOLO in sviluppo: in M4 lo sostituiremo con CSS compilato (vedi README) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { theme: { extend: {
-      fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+      // Font di sistema: su iPhone/Mac è San Francisco (come le app Apple), altrove il font nativo. Nessun download.
+      fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'system-ui', 'sans-serif'] },
       // I colori leggono variabili CSS (definite sotto): cambiano da sole in modalità scura. <alpha-value> permette es. text-muted/60.
-      colors: Object.fromEntries(['canvas', 'surface', 'ink', 'muted', 'track', 'brand', 'brand-hover', 'deep', 'tint', 'action', 'danger',
-        'accent', 'water', 'protein', 'fat', 'line']
+      colors: Object.fromEntries(['canvas', 'surface', 'ink', 'muted', 'faint', 'track', 'brand', 'brand-hover', 'deep', 'tint', 'action', 'danger',
+        'accent', 'water', 'protein', 'carbs', 'fat', 'line']
         .map(name => [name, `rgb(var(--${name}) / <alpha-value>)`])),
       transitionTimingFunction: { spring: 'cubic-bezier(.2,.8,.2,1)' },
     } } };
   </script>
   <style type="text/tailwindcss">
-    /* THEME-START — tema chiaro; il tema scuro segue le impostazioni del telefono (prefers-color-scheme).
-       brand = grafica (anello, barre); action = sfondo dei pulsanti con testo bianco (contrasto >= 4,5:1);
-       deep = testo verde; danger = testo/grafica "oltre l'obiettivo" ed errori. */
+    /* THEME-START — palette dei colori di sistema iOS (Apple HIG). Il tema scuro segue il telefono (prefers-color-scheme).
+       canvas = sfondo; surface = card; track = riempimenti secondari e binari delle barre; line = bordo "capello" delle card.
+       ink / muted / faint = testo primario / secondario / terziario (faint solo per dettagli NON essenziali: contrasto < 4,5:1).
+       brand = accento grafico (anello, punti, link); deep = accento come TESTO (scurito/schiarito per il contrasto AA);
+       action = sfondo dei pulsanti pieni con testo bianco (#0071E3: contrasto 4,7:1). Nessun sottotono verde: grigi neutri. */
     :root {
       color-scheme: light;
-      --canvas: 242 246 244; --surface: 255 255 255; --ink: 16 30 24; --muted: 82 99 91; --track: 226 236 231; --line: 214 226 220;
-      --brand: 5 150 105; --brand-hover: 6 95 70; --deep: 4 120 87; --tint: 224 245 236; --action: 4 120 87; --danger: 185 28 28;
-      --accent: 13 148 136; --water: 14 165 233; --protein: 99 102 241; --fat: 217 119 6;
+      --canvas: 242 242 247; --surface: 255 255 255; --ink: 0 0 0; --muted: 108 108 112; --faint: 142 142 147;
+      --track: 229 229 234; --line: 0 0 0; --line-alpha: .06; --tint: 238 238 240;
+      --brand: 0 122 255; --brand-hover: 0 92 200; --deep: 0 100 210; --action: 0 113 227; --danger: 215 0 21;
+      --accent: 88 86 214; --water: 50 173 230; --protein: 88 86 214; --carbs: 255 149 0; --fat: 230 184 0;
     }
     @media (prefers-color-scheme: dark) {
       :root {
         color-scheme: dark;
-        --canvas: 11 17 14; --surface: 21 30 25; --ink: 232 240 236; --muted: 158 176 166; --track: 40 54 46; --line: 48 64 55;
-        --brand: 16 185 129; --brand-hover: 6 95 70; --deep: 52 211 153; --tint: 20 50 38; --action: 4 120 87; --danger: 248 113 113;
-        --accent: 45 212 191; --water: 56 189 248; --protein: 129 140 248; --fat: 251 191 36;
+        --canvas: 0 0 0; --surface: 28 28 30; --ink: 255 255 255; --muted: 142 142 147; --faint: 99 99 102;
+        --track: 44 44 46; --line: 255 255 255; --line-alpha: .08; --tint: 44 44 46;
+        --brand: 10 132 255; --brand-hover: 0 98 204; --deep: 64 156 255; --action: 0 113 227; --danger: 255 69 58;
+        --accent: 94 92 230; --water: 100 210 255; --protein: 94 92 230; --carbs: 255 159 10; --fat: 255 214 10;
       }
     }
     /* THEME-END */
     @layer components {
-      .field-input { @apply w-full rounded-2xl border border-track bg-surface px-4 py-3 text-base text-ink transition-shadow
-        placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand; }
+      /* Bordo "capello" stile iOS: 1px quasi invisibile (bianco 8% al buio, nero 6% alla luce) */
+      .hairline { border: 1px solid rgb(var(--line) / var(--line-alpha)); }
+      .field-input { @apply w-full rounded-xl border-0 bg-tint px-4 py-3 text-base text-ink transition-shadow
+        placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand; }
       .btn-primary { @apply w-full rounded-full bg-action py-3.5 font-semibold text-white transition duration-150 ease-spring
-        hover:bg-brand-hover active:scale-[.97] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2; }
-      .btn-soft { @apply rounded-full bg-tint font-semibold text-deep transition duration-150 ease-spring hover:bg-brand/15 active:scale-[.97]; }
+        hover:bg-brand-hover active:scale-[.97] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-surface; }
+      .btn-soft { @apply rounded-full bg-tint font-semibold text-deep transition duration-150 ease-spring hover:bg-track active:scale-[.97]; }
       .chip { @apply inline-flex min-h-9 items-center gap-1.5 rounded-full bg-tint px-3.5 text-xs font-semibold text-deep
-        transition duration-150 ease-spring hover:bg-brand/15 active:scale-95; }
-      .card { @apply rounded-3xl border border-line/60 bg-surface p-5 shadow-sm; }
-      .eating-button { @apply w-full bg-surface rounded-3xl border border-line/60 shadow-sm py-3.5 pl-[18px] pr-3.5 flex items-center gap-3 text-left
-        transition duration-200 ease-spring hover:shadow-md active:scale-[.985]; }
+        transition duration-150 ease-spring hover:bg-track active:scale-95; }
+      /* Pillola "Aggiungi" (sostituisce il vecchio cerchio con il "+" testuale) */
+      .pill-add { @apply inline-flex shrink-0 items-center gap-1 rounded-full bg-tint px-3 py-1.5 text-xs font-semibold text-deep transition-colors; }
+      .card { @apply hairline rounded-3xl bg-surface p-5; }
+      .eating-button { @apply hairline w-full rounded-2xl bg-surface p-4 flex items-center gap-3 text-left
+        transition-transform duration-150 ease-out active:scale-[0.98]; }
+      .eating-button:hover .pill-add { background-color: rgb(var(--brand) / .15); }
+      /* Vetro smerigliato per barre e fogli (glassmorphism) */
+      .glass { @apply backdrop-blur-xl backdrop-saturate-150; background-color: rgb(var(--canvas) / .75); }
     }
     /* Con la finestra aperta la pagina dietro non scorre. :has() legge lo stato nativo del <dialog>
        ([open]), quindi funziona anche quando si chiude con Esc, senza codice JS. */
     html:has(dialog[open]) { overflow: hidden; }
-
-    /* Sfondo: una leggera sfumatura in alto dà profondità senza rubare attenzione ai dati */
-    body { background-image: radial-gradient(120% 60% at 50% -10%, rgb(var(--brand) / .10), transparent 60%); background-attachment: fixed; }
+    /* Numeri sempre a larghezza fissa (kcal, grammi, macro, acqua, peso): nessun "salto" quando cambiano */
+    body { font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent; }
 
     /* Il pannello alimenti è un "foglio" che sale dal basso; le altre finestre "sbocciano" al centro */
     .sheet { max-height: 90vh; max-height: 90dvh; }
@@ -87,15 +97,13 @@
     .chart-dot:hover, .chart-dot:focus-visible, .chart-dot[aria-pressed="true"] { r: 6; }
     .chart-dot:focus-visible { outline: none; stroke: rgb(var(--ink)); stroke-width: 2; }
 
-    /* Barra di navigazione: la "pillola" dietro la voce attiva si allarga e si colora */
-    .nav-link .nav-pill { transition: background-color 250ms, width 300ms cubic-bezier(.2,.8,.2,1); width: 2.5rem; }
-    .nav-link[aria-current="page"] .nav-pill { background-color: rgb(var(--tint)); width: 3.75rem; }
-    .nav-link[aria-current="page"] svg { transform: translateY(-1px) scale(1.08); }
-    .nav-link svg { transition: transform 250ms cubic-bezier(.2,.8,.2,1); }
-    .fab { background-image: linear-gradient(135deg, rgb(var(--brand)), rgb(var(--accent))); }
-    .fab:active { transform: scale(.92); }
-    .fab span { transition: transform 300ms cubic-bezier(.2,.8,.2,1); }
-    .fab:hover span { transform: rotate(90deg); }
+    /* Tab bar stile iOS: voce attiva = colore d'accento (niente pillole o forme), icona che "respira" al tocco */
+    .nav-link svg { transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
+    .nav-link:active svg { transform: scale(.88); }
+    .nav-link[aria-current="page"] svg .fill-when-active { fill: currentColor; fill-opacity: .18; }
+    /* Azione "Aggiungi" nella tab bar: quadrato arrotondato con icona SVG, non più il cerchio con il "+" di testo */
+    .add-action .add-icon { transition: transform 150ms ease-out; }
+    .add-action:active .add-icon { transform: scale(.9); }
     /* Toast globale (sopra la barra): scuro su chiaro e viceversa, sempre leggibile */
     #app-toast [data-undo] { color: rgb(var(--canvas)); }
     /* Tastiera: un contorno ben visibile su tutto ciò che si può attivare */
@@ -112,9 +120,9 @@
 <body class="bg-canvas text-ink font-sans antialiased tabular-nums">
 
   <!-- VISTA 1: onboarding. Parte nascosta: la mostra render() in main.js solo se manca il profilo -->
-  <section id="onboarding-section" class="hidden mx-auto max-w-md px-5 pt-14 pb-10">
+  <section id="onboarding-section" class="hidden mx-auto min-h-screen max-w-md px-5 pt-14 pb-10">
 
-    <h1 class="text-2xl font-extrabold tracking-tight">Inserisci i tuoi dati</h1>
+    <h1 class="text-[34px] font-bold leading-tight tracking-tight">Inserisci i tuoi dati</h1>
     <p class="mt-1 text-sm text-muted">Li usiamo per calcolare il tuo fabbisogno giornaliero. Restano sul tuo dispositivo.</p>
 
     <form id="onboarding-form" novalidate class="mt-6 flex flex-col gap-4">
@@ -169,87 +177,88 @@
   </section>
 
   <!-- VISTA 2: dashboard -->
-  <section id="app-section" class="hidden pb-32">
+  <section id="app-section" class="hidden mx-auto min-h-screen max-w-md pb-32">
 
     <!-- VISTA home (la dashboard di prima) -->
     <section data-view="home" class="hidden">
-    <header class="mx-auto max-w-md px-5 pt-14">
-      <p id="date-header" class="text-[13px] font-medium text-muted capitalize"></p>
-      <h1 id="welcome-header" class="mt-0.5 text-[26px] font-extrabold tracking-tight"></h1>
+    <!-- Titolo grande stile iOS: data piccola sopra, saluto in grassetto -->
+    <header class="px-5 pt-14">
+      <p id="date-header" class="text-[13px] font-semibold uppercase tracking-wide text-muted"></p>
+      <h1 id="welcome-header" class="mt-1 text-[34px] font-bold leading-tight tracking-tight"></h1>
     </header>
 
-    <main class="mx-auto flex max-w-md flex-col gap-4 px-5 pt-4">
+    <main class="flex flex-col gap-5 px-4 pt-5">
       <!-- Prossimo passo: UN suggerimento alla volta, scelto in base all'ora e a cosa manca oggi (dashboard.js) -->
       <section id="next-step" aria-live="polite" class="reveal hidden" style="--i:0"></section>
 
       <!-- Card calorie -->
-      <section aria-label="Calorie di oggi" class="reveal flex items-center gap-5 rounded-[28px] border border-line/60 bg-surface p-[22px] shadow-md" style="--i:1">
-        <div class="relative h-[150px] w-[150px] shrink-0">
+      <section aria-label="Calorie di oggi" class="reveal card flex items-center gap-6" style="--i:1">
+        <div class="relative h-[148px] w-[148px] shrink-0">
 
-          <svg aria-hidden="true" class="-rotate-90" width="150" height="150" viewBox="0 0 150 150">
-            <circle cx="75" cy="75" r="64" fill="none" class="stroke-track" stroke-width="14"/>
-            <circle id="ring-progress" cx="75" cy="75" r="64" fill="none" class="ring stroke-brand" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 402.1"/>
+          <svg aria-hidden="true" class="-rotate-90" width="148" height="148" viewBox="0 0 150 150">
+            <circle cx="75" cy="75" r="64" fill="none" class="stroke-track" stroke-width="12"/>
+            <circle id="ring-progress" cx="75" cy="75" r="64" fill="none" class="ring stroke-brand" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 402.1"/>
           </svg>
 
           <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <p id="kcal-remaining" class="text-3xl font-extrabold tracking-tighter">–</p>
-            <p id="kcal-remaining-label" class="text-xs font-semibold text-muted">kcal rimanenti</p>
+            <p id="kcal-remaining" class="text-[32px] font-bold leading-none tracking-tight tabular-nums">–</p>
+            <p id="kcal-remaining-label" class="mt-1 text-xs font-medium text-muted">kcal rimanenti</p>
           </div>
         </div>
 
-        <dl class="flex flex-1 flex-col gap-3.5">
-          <div><dt class="text-xs font-semibold text-muted">Obiettivo</dt>
-               <dd class="text-xl font-bold"><span id="kcal-goal">–</span> <span class="text-xs font-medium text-muted">kcal</span></dd></div>
-          <div><dt class="text-xs font-semibold text-muted">Consumate</dt>
-               <dd class="text-xl font-bold text-deep"><span id="kcal-eaten">–</span> <span class="text-xs font-medium text-muted">kcal</span></dd></div>
+        <dl class="flex flex-1 flex-col gap-4">
+          <div><dt class="text-xs font-medium text-muted">Obiettivo</dt>
+               <dd class="mt-0.5 text-[22px] font-semibold leading-tight tabular-nums"><span id="kcal-goal">–</span> <span class="text-xs font-medium text-muted">kcal</span></dd></div>
+          <div><dt class="text-xs font-medium text-muted">Consumate</dt>
+               <dd class="mt-0.5 text-[22px] font-semibold leading-tight text-deep tabular-nums"><span id="kcal-eaten">–</span> <span class="text-xs font-medium text-muted">kcal</span></dd></div>
         </dl>
-        
+
       </section>
 
       <!-- Macro e diario: il contenuto lo GENERA il JS da array di dati (niente markup copiato) -->
-      <section id="macros" aria-label="Macronutrienti" class="reveal flex gap-4 rounded-3xl border border-line/60 bg-surface px-5 py-[18px] shadow-sm" style="--i:2"></section>
+      <section id="macros" aria-label="Macronutrienti" class="reveal card flex gap-5" style="--i:2"></section>
 
       <!-- Oggi in breve: acqua, integratori e peso a portata di pollice (i dettagli sono nel Diario) -->
       <section aria-label="Oggi in breve" class="reveal grid grid-cols-3 gap-3" style="--i:3">
-        <div class="flex flex-col gap-2 rounded-3xl border border-line/60 bg-surface p-3.5 shadow-sm">
-          <span class="text-xs font-semibold text-muted">Acqua</span>
-          <span id="home-water" class="text-[15px] font-bold leading-tight"></span>
-          <div role="progressbar" id="home-water-bar" aria-label="Acqua di oggi" aria-valuemin="0" class="h-1.5 rounded bg-track">
-            <div id="home-water-fill" class="bar-fill h-1.5 rounded bg-water" style="width:0%"></div></div>
-          <button type="button" data-water="250" aria-label="Aggiungi 250 ml di acqua" class="chip mt-auto justify-center whitespace-nowrap !px-2">+250 ml</button>
+        <div class="hairline flex flex-col gap-2 rounded-2xl bg-surface p-4">
+          <span class="text-xs font-medium text-muted">Acqua</span>
+          <span id="home-water" class="text-[17px] font-semibold leading-tight tabular-nums"></span>
+          <div role="progressbar" id="home-water-bar" aria-label="Acqua di oggi" aria-valuemin="0" class="h-1.5 overflow-hidden rounded-full bg-track">
+            <div id="home-water-fill" class="bar-fill h-1.5 rounded-full bg-water" style="width:0%"></div></div>
+          <button type="button" data-water="250" aria-label="Aggiungi 250 ml di acqua" class="chip mt-auto justify-center whitespace-nowrap !px-2 tabular-nums">+250 ml</button>
         </div>
-        <a href="#diary" class="flex flex-col gap-2 rounded-3xl border border-line/60 bg-surface p-3.5 shadow-sm transition active:scale-[.97]">
-          <span class="text-xs font-semibold text-muted">Integratori</span>
-          <span id="home-supplements" class="text-[15px] font-bold leading-tight"></span>
+        <a href="#diary" class="hairline flex flex-col gap-2 rounded-2xl bg-surface p-4 transition-transform duration-150 active:scale-[0.98]">
+          <span class="text-xs font-medium text-muted">Integratori</span>
+          <span id="home-supplements" class="text-[17px] font-semibold leading-tight tabular-nums"></span>
           <span id="home-supplements-hint" class="mt-auto text-xs font-semibold text-deep"></span>
         </a>
-        <a href="#diary" class="flex flex-col gap-2 rounded-3xl border border-line/60 bg-surface p-3.5 shadow-sm transition active:scale-[.97]">
-          <span class="text-xs font-semibold text-muted">Peso</span>
-          <span id="home-weight" class="text-[15px] font-bold leading-tight"></span>
+        <a href="#diary" class="hairline flex flex-col gap-2 rounded-2xl bg-surface p-4 transition-transform duration-150 active:scale-[0.98]">
+          <span class="text-xs font-medium text-muted">Peso</span>
+          <span id="home-weight" class="text-[17px] font-semibold leading-tight tabular-nums"></span>
           <span id="home-weight-hint" class="mt-auto text-xs font-semibold text-deep"></span>
         </a>
       </section>
 
-      <h2 class="reveal mt-1.5 text-lg font-extrabold tracking-tight" style="--i:4">Diario alimentare</h2>
-      <ul id="meal-list" class="reveal flex flex-col gap-3" style="--i:5"></ul>
+      <h2 class="reveal mt-2 px-1 text-[22px] font-bold tracking-tight" style="--i:4">Diario alimentare</h2>
+      <ul id="meal-list" class="reveal -mt-2 flex flex-col gap-2.5" style="--i:5"></ul>
     
     </main>
 
     </section>
 
     <!-- VISTA diario: abitudini e storico (M3). Ogni scheda si riempie in un passo successivo. -->
-    <section data-view="diary" class="hidden mx-auto max-w-md px-5 pt-14">
-      <h1 class="text-[26px] font-extrabold tracking-tight">Diario</h1>
+    <section data-view="diary" class="hidden px-4 pt-14">
+      <h1 class="px-1 text-[34px] font-bold leading-tight tracking-tight">Diario</h1>
       <div class="mt-4 flex flex-col gap-4">
         <section id="history-card" aria-labelledby="history-title" class="reveal card" style="--i:1">
-          <h2 id="history-title" class="text-lg font-extrabold tracking-tight">Ultimi 3 giorni</h2>
+          <h2 id="history-title" class="text-[17px] font-semibold tracking-tight">Ultimi 3 giorni</h2>
           <ul id="history-list" class="mt-3 flex flex-col gap-3"></ul>
         </section>
         <section id="water-card" aria-labelledby="water-title" class="reveal card" style="--i:2">
-          <h2 id="water-title" class="text-lg font-extrabold tracking-tight">Acqua</h2>
-          <p id="water-total" class="mt-2 text-3xl font-extrabold tracking-tight"></p>
-          <div id="water-bar" role="progressbar" aria-label="Acqua di oggi" aria-valuemin="0" class="mt-3 h-2.5 rounded bg-track">
-            <div id="water-fill" class="bar-fill h-2.5 rounded bg-water" style="width:0%"></div>
+          <h2 id="water-title" class="text-[17px] font-semibold tracking-tight">Acqua</h2>
+          <p id="water-total" class="mt-2 text-[28px] font-bold tracking-tight tabular-nums"></p>
+          <div id="water-bar" role="progressbar" aria-label="Acqua di oggi" aria-valuemin="0" class="mt-3 h-2 overflow-hidden rounded-full bg-track">
+            <div id="water-fill" class="bar-fill h-2 rounded-full bg-water" style="width:0%"></div>
           </div>
           <div class="mt-3 flex gap-2">
             <button type="button" data-water="-250" class="btn-soft h-11 flex-1 text-sm">−250 ml</button>
@@ -258,7 +267,7 @@
           </div>
         </section>
         <section id="weight-card" aria-labelledby="weight-title" class="reveal card" style="--i:3">
-          <h2 id="weight-title" class="text-lg font-extrabold tracking-tight">Peso</h2>
+          <h2 id="weight-title" class="text-[17px] font-semibold tracking-tight">Peso</h2>
           <form id="weight-form" novalidate class="mt-3 flex items-start gap-2">
             <label class="flex-1"><span class="sr-only">Peso di oggi (kg)</span>
               <input name="weightKg" type="number" step="0.1" inputmode="decimal" placeholder="Peso di oggi (kg)" class="field-input"></label>
@@ -278,14 +287,14 @@
             <p id="weight-chart-desc" class="sr-only"></p>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" aria-hidden="true">
               <span class="inline-flex items-center gap-1.5"><svg width="18" height="8"><line x1="1" y1="4" x2="17" y2="4" class="stroke-brand" stroke-width="2.5" stroke-linecap="round"/></svg>Peso</span>
-              <span class="inline-flex items-center gap-1.5"><svg width="18" height="8"><line x1="1" y1="4" x2="17" y2="4" class="stroke-protein" stroke-width="2" stroke-dasharray="4 3"/></svg>Media 7 giorni</span>
+              <span class="inline-flex items-center gap-1.5"><svg width="18" height="8"><line x1="1" y1="4" x2="17" y2="4" class="stroke-carbs" stroke-width="2" stroke-dasharray="4 3"/></svg>Media 7 giorni</span>
             </div>
             <p id="weight-chart-readout" role="status" class="min-h-5 text-sm font-semibold"></p>
           </figure>
           <ul id="weight-list" class="mt-1 flex flex-col gap-2"></ul>
         </section>
         <section id="supplements-card" aria-labelledby="supplements-title" class="reveal card" style="--i:4">
-          <h2 id="supplements-title" class="text-lg font-extrabold tracking-tight">Integratori</h2>
+          <h2 id="supplements-title" class="text-[17px] font-semibold tracking-tight">Integratori</h2>
           <ul id="supplements-list" class="mt-3 flex flex-col gap-2"></ul>
           <form id="supplement-form" novalidate class="mt-3 flex items-start gap-2">
             <label class="flex-1"><span class="sr-only">Nome dell'integratore</span>
@@ -298,11 +307,11 @@
     </section>
 
     <!-- VISTA impostazioni (M3) -->
-    <section data-view="settings" class="hidden mx-auto max-w-md px-5 pt-14">
-      <h1 class="text-[26px] font-extrabold tracking-tight">Impostazioni</h1>
+    <section data-view="settings" class="hidden px-4 pt-14">
+      <h1 class="px-1 text-[34px] font-bold leading-tight tracking-tight">Impostazioni</h1>
       <div class="mt-4 flex flex-col gap-4">
         <section id="goal-card" aria-labelledby="goal-title" class="reveal card" style="--i:1">
-          <h2 id="goal-title" class="text-lg font-extrabold tracking-tight">Obiettivo e attività</h2>
+          <h2 id="goal-title" class="text-[17px] font-semibold tracking-tight">Obiettivo e attività</h2>
           <form id="goal-form" novalidate class="mt-3 flex flex-col gap-3">
             <label class="flex flex-col gap-1.5">
               <span class="text-sm font-medium">Obiettivo</span>
@@ -320,7 +329,7 @@
           </form>
         </section>
         <section id="personal-card" aria-labelledby="personal-title" class="reveal card" style="--i:2">
-          <h2 id="personal-title" class="text-lg font-extrabold tracking-tight">Dati personali</h2>
+          <h2 id="personal-title" class="text-[17px] font-semibold tracking-tight">Dati personali</h2>
           <p class="mt-1 text-sm text-muted">Cambiando peso, età o altezza i target si ricalcolano.</p>
           <form id="personal-form" novalidate class="mt-3 flex flex-col gap-3">
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Nome</span>
@@ -343,7 +352,7 @@
           </form>
         </section>
         <section id="data-card" aria-labelledby="data-title" class="reveal card" style="--i:3">
-          <h2 id="data-title" class="text-lg font-extrabold tracking-tight">Backup e ripristino</h2>
+          <h2 id="data-title" class="text-[17px] font-semibold tracking-tight">Backup e ripristino</h2>
           <p class="mt-1 text-sm text-muted">I dati restano solo su questo dispositivo. Salva un backup per non perderli o per passare a un altro telefono.</p>
           <div class="mt-4 flex flex-col gap-3">
             <button id="export-button" type="button" class="btn-primary inline-flex items-center justify-center gap-2">
@@ -364,25 +373,28 @@
     </section>
 
     <!-- Toast globale: conferme e "Annulla" fuori dal pannello alimenti (es. "Copia da ieri" dalla home) -->
-    <div id="app-toast" role="status" class="fixed inset-x-4 bottom-[6.75rem] z-20 mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-lg empty:hidden"></div>
+    <div id="app-toast" role="status" class="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-2xl empty:hidden"></div>
 
-    <!-- Barra di navigazione "flottante": vetro smerigliato, pillola sulla voce attiva, pulsante + al centro -->
-    <nav aria-label="Navigazione principale" class="fixed inset-x-0 bottom-0 z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div class="mx-auto grid max-w-md grid-cols-4 items-center rounded-[28px] border border-line/70 bg-surface/85 px-2 py-1.5 shadow-[0_8px_30px_rgba(16,30,24,0.12)] backdrop-blur-xl">
-        <a href="#home" data-nav="home" class="nav-link flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-muted"><span class="nav-pill flex h-8 items-center justify-center rounded-full"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>Home</a>
-        <a href="#diary" data-nav="diary" class="nav-link flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-muted"><span class="nav-pill flex h-8 items-center justify-center rounded-full"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>Diario</a>
-        <div class="flex justify-center"><button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="fab -mt-7 flex h-[60px] w-[60px] items-center justify-center rounded-full text-white shadow-[0_10px_24px_rgba(5,150,105,0.45)] ring-4 ring-canvas transition-transform duration-150"><span aria-hidden="true" class="text-[32px] font-light leading-none">+</span></button></div>
-        <a href="#settings" data-nav="settings" class="nav-link flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-muted"><span class="nav-pill flex h-8 items-center justify-center rounded-full"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>Impostazioni</a>
+    <!-- Tab bar stile iOS: attaccata al bordo inferiore, vetro smerigliato e bordo "capello" in alto.
+         L'aggiunta è una voce della barra (icona SVG in un quadrato d'accento), non più il grande cerchio con il "+". -->
+    <nav aria-label="Navigazione principale" class="fixed inset-x-0 bottom-0 z-10">
+      <div class="glass mx-auto grid max-w-md grid-cols-4 border-t border-black/[.08] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-white/10">
+        <a href="#home" data-nav="home" class="nav-link flex h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="fill-when-active" d="M3.5 10.5L12 3.5l8.5 7V20a1 1 0 0 1-1 1h-4.5v-6h-6v6H4.5a1 1 0 0 1-1-1z"/></svg>Home</a>
+        <a href="#diary" data-nav="diary" class="nav-link flex h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="fill-when-active" x="4.5" y="3" width="15" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Diario</a>
+        <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="add-action flex h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium text-deep">
+          <span class="add-icon flex h-7 w-7 items-center justify-center rounded-[9px] bg-action text-white" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 1.5v11M1.5 7h11"/></svg></span>Aggiungi</button>
+        <a href="#settings" data-nav="settings" class="nav-link flex h-12 flex-col items-center justify-center gap-1 text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle class="fill-when-active" cx="15" cy="6" r="2"/><circle class="fill-when-active" cx="9" cy="12" r="2"/><circle class="fill-when-active" cx="17" cy="18" r="2"/></svg>Impostazioni</a>
       </div>
     </nav>
   </section>
 
   <!-- FINESTRA "aggiungi alimento": <dialog> è nativo (showModal/close, tasto Esc e focus gestiti dal browser) -->
-  <dialog id="food-dialog" class="sheet mx-auto mb-0 mt-auto w-full max-w-md overscroll-contain rounded-b-none rounded-t-3xl bg-surface p-0 text-ink shadow-xl backdrop:bg-black/40">
+  <dialog id="food-dialog" class="sheet mx-auto mb-0 mt-auto w-full max-w-md overscroll-contain rounded-b-none rounded-t-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
     <div class="flex flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <div class="flex items-center justify-between">
-        <h2 id="food-dialog-title" class="text-lg font-extrabold tracking-tight"></h2>
-        <button id="food-close" type="button" aria-label="Chiudi" class="h-11 w-11 rounded-full bg-tint text-xl text-deep">✕</button>
+        <h2 id="food-dialog-title" class="text-[17px] font-semibold tracking-tight"></h2>
+        <button id="food-close" type="button" aria-label="Chiudi" class="flex h-9 w-9 items-center justify-center rounded-full bg-tint text-muted transition active:scale-90"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button>
       </div>
       <input id="food-search" type="search" placeholder="Cerca un alimento..." autocomplete="off" aria-label="Cerca un alimento" class="field-input">
 
@@ -446,9 +458,9 @@
       </div>
     </div>
   </dialog>
-  <dialog id="import-dialog" aria-labelledby="import-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink shadow-xl backdrop:bg-black/40">
+  <dialog id="import-dialog" aria-labelledby="import-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
     <div class="flex flex-col gap-4 p-5">
-      <h2 id="import-title" class="text-lg font-extrabold tracking-tight">Ripristinare questo backup?</h2>
+      <h2 id="import-title" class="text-[17px] font-semibold tracking-tight">Ripristinare questo backup?</h2>
       <p id="import-date" class="-mt-2 text-xs text-muted"></p>
       <p id="import-summary" class="rounded-2xl bg-tint px-4 py-3 text-sm font-semibold text-deep"></p>
       <p class="text-sm text-muted">I dati che hai ora su questo dispositivo verranno <b class="text-ink">sostituiti</b> da quelli del file. Se vuoi, scarica prima un backup di quelli attuali.</p>
@@ -457,9 +469,9 @@
     </div>
   </dialog>
 
-  <dialog id="delete-dialog" aria-labelledby="delete-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink shadow-xl backdrop:bg-black/40">
+  <dialog id="delete-dialog" aria-labelledby="delete-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
     <div class="flex flex-col gap-4 p-5">
-      <h2 id="delete-title" class="text-lg font-extrabold tracking-tight">Eliminare tutti i dati?</h2>
+      <h2 id="delete-title" class="text-[17px] font-semibold tracking-tight">Eliminare tutti i dati?</h2>
       <p class="text-sm text-muted">Profilo, diario dei pasti, acqua, peso e integratori verranno cancellati da questo dispositivo. L'operazione non si può annullare: se vuoi una copia, esporta prima i dati.</p>
       <button id="delete-confirm" type="button" class="h-12 rounded-full bg-red-600 font-semibold text-white">Sì, elimina tutto</button>
       <button id="delete-cancel" type="button" class="h-12 rounded-full bg-tint font-semibold text-deep">Annulla</button>

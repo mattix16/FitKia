@@ -100,7 +100,7 @@ function renderChart(weight) {
 
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.innerHTML = gridMarkup
-    + (averageLine ? `<polyline points="${averageLine}" fill="none" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" class="stroke-protein ${animate ? 'fade-late' : ''}" aria-hidden="true"/>` : '')
+    + (averageLine ? `<polyline points="${averageLine}" fill="none" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" class="stroke-carbs ${animate ? 'fade-late' : ''}" aria-hidden="true"/>` : '')
     + (weightLine ? `<polyline points="${weightLine}" pathLength="1" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="stroke-brand ${animate ? 'draw-line' : ''}" aria-hidden="true"/>` : '')
     + `<line id="weight-guide" class="hidden stroke-muted/50" y1="${padding / 2}" y2="${height - padding / 2}" stroke-width="1" aria-hidden="true"/>`
     + points.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="${i === points.length - 1 ? 5 : 3.5}" tabindex="0" role="button"
@@ -114,10 +114,10 @@ function renderChart(weight) {
 export function renderWeight(state) {
   renderChart(state.habits.weight);
   const rows = weightHistory(state.habits, WEIGHT_HISTORY_SHOWN);
-  $('weight-list').innerHTML = rows.map(({ date, kg, delta }) => `<li class="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-2.5">
+  $('weight-list').innerHTML = rows.map(({ date, kg, delta }) => `<li class="flex items-center gap-3 rounded-xl bg-tint/60 px-4 py-2.5">
       <span class="flex-1 text-sm text-muted">${formatShortDate(date)}</span>
       ${delta === null ? '' : `<span class="text-xs font-semibold text-muted">${formatSigned(delta)} kg</span>`}
       <span class="text-sm font-bold">${formatDecimal(kg)} kg</span>
-      <button type="button" data-weight-date="${esc(date)}" aria-label="Rimuovi il peso del ${formatShortDate(date)}" class="h-11 w-11 rounded-full bg-tint text-deep transition active:scale-90">✕</button></li>`
+      <button type="button" data-weight-date="${esc(date)}" aria-label="Rimuovi il peso del ${formatShortDate(date)}" class="h-11 w-11 rounded-full bg-tint text-muted transition active:scale-90"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`
   ).join('') || '<li class="text-sm text-muted">Nessun peso registrato: scrivi qui sopra quello di oggi.</li>';
 }

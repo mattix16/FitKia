@@ -17,13 +17,14 @@ export function renderMeals(container, day, yesterday = {}) {
 
     return `<li class="flex flex-col gap-1.5">
       <button type="button" class="eating-button" data-meal-id="${meal.id}">
-        <span aria-hidden="true" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-canvas text-xl">${MEAL_ICONS[meal.id]}</span>
-        <span class="flex-1 min-w-0"><span class="block text-[15px] font-bold">${meal.label}</span>
-          <span class="block text-xs text-muted mt-0.5 truncate" data-summary-for="${meal.id}"></span></span>
-        <span class="text-sm font-bold">${fmt.format(mealTotals(day, meal.id).kcal)} <span class="text-[11px] font-medium text-muted">kcal</span></span>
-        <span aria-hidden="true" class="w-10 h-10 rounded-full bg-tint text-deep text-2xl leading-none flex items-center justify-center">+</span>
+        <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tint text-lg">${MEAL_ICONS[meal.id]}</span>
+        <span class="flex-1 min-w-0"><span class="block text-[15px] font-semibold">${meal.label}</span>
+          <span class="mt-0.5 block truncate text-xs text-muted" data-summary-for="${meal.id}"></span>
+          <span class="mt-0.5 block text-xs font-semibold tabular-nums">${fmt.format(mealTotals(day, meal.id).kcal)} <span class="font-medium text-muted">kcal</span></span></span>
+        <span aria-hidden="true" class="pill-add">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>Aggiungi</span>
       </button>
-      ${canRepeat ? `<button type="button" data-repeat-meal="${meal.id}" class="chip self-start ml-3"
+      ${canRepeat ? `<button type="button" data-repeat-meal="${meal.id}" class="chip self-start ml-2 tabular-nums"
           aria-label="Copia ${meal.label.toLowerCase()} di ieri: ${formatFoodCount(previous.length)}, ${fmt.format(mealTotals(yesterday, meal.id).kcal)} kcal">
           <span aria-hidden="true">↻</span> Come ieri · ${formatFoodCount(previous.length)} · ${fmt.format(mealTotals(yesterday, meal.id).kcal)} kcal</button>` : ''}
     </li>`;

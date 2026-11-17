@@ -34,11 +34,11 @@ export function renderSupplements(state) {
   // I nomi li scrive l'utente: SEMPRE escapeHtml prima di metterli in innerHTML.
   $('supplements-list').innerHTML = state.habits.supplements.map(({ id, name }) => {
     const done = isChecked(state.habits, today, id);
-    return `<li class="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-2.5">
+    return `<li class="flex items-center gap-3 rounded-xl bg-tint/60 px-4 py-2.5">
       <label class="flex min-h-11 min-w-0 flex-1 items-center gap-3">
-        <input type="checkbox" data-supplement-id="${esc(id)}" ${done ? 'checked' : ''} class="h-5 w-5 accent-emerald-600">
+        <input type="checkbox" data-supplement-id="${esc(id)}" ${done ? 'checked' : ''} class="h-5 w-5 accent-action">
         <span class="truncate text-sm ${done ? 'text-muted line-through' : ''}">${esc(name)}</span>
       </label>
-      <button type="button" data-remove-id="${esc(id)}" aria-label="Rimuovi ${esc(name)}" class="h-11 w-11 rounded-full bg-tint text-deep">✕</button></li>`;
+      <button type="button" data-remove-id="${esc(id)}" aria-label="Rimuovi ${esc(name)}" class="h-11 w-11 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`;
   }).join('') || '<li class="text-sm text-muted">Nessun integratore: aggiungine uno qui sotto.</li>';
 }

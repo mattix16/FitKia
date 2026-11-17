@@ -1,5 +1,5 @@
 // Service Worker di Fitkia. Cambia VERSION a ogni release: è ciò che fa arrivare gli aggiornamenti agli utenti.
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE = `fitkia-${VERSION}`;
 
 // App shell: tutto ciò che serve per aprire l'app senza rete.
@@ -13,7 +13,7 @@ const PRECACHE = [
 
 // Finché Tailwind e i font arrivano da CDN (solo sviluppo) li teniamo in cache per l'uso offline.
 // In M4, con CSS compilato e font locali, questa parte sparisce.
-const CDN_ORIGINS = ['https://cdn.tailwindcss.com', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'];
+const CDN_ORIGINS = ['https://cdn.tailwindcss.com'];
 const CDN_PRECACHE = ['https://cdn.tailwindcss.com'];
 
 self.addEventListener('install', event => {
