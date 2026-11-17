@@ -39,7 +39,19 @@ function registerServiceWorker() {
 }
 
 // L'indirizzo (#diary...) è la fonte della vista: così funzionano anche il tasto "indietro" e i segnalibri.
-const syncView = () => setState({ view: viewFromHash(location.hash) });
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Allinea lo stato all'indirizzo. Con `animate` usa la View Transitions API (dissolvenza) dove esiste; altrimenti cambia e basta. */
+function syncView(animate = true) {
+  const update = () => setState({ view: viewFromHash(location.hash) });
+  if (animate && document.startViewTransition && !prefersReducedMotion()) {
+    const transition = document.startViewTransition(update);
+    transition.ready.catch(() => {});      // transizione saltata (es. scheda in background): non è un errore
+    transition.finished.catch(() => {});
+  } else {
+    update();
+  }
+}
 
 function init() {
   hydrate();                                                                  // 1. leggi i dati salvati
@@ -49,12 +61,12 @@ function init() {
   mountSettings();
   mountDiary();
   $('add-food-button').addEventListener('click', () => openFoodPanel(defaultMealId()));
-  window.addEventListener('hashchange', syncView);
+  window.addEventListener('hashchange', () => syncView());
   // App rimasta aperta (o in background) a cavallo della mezzanotte: tornando visibile, se il giorno è cambiato si ridisegna.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && todayKey() !== shownDay) render(getState());
   });
-  syncView();                                                                 // vista iniziale dall'indirizzo
+  syncView(false);                                                            // vista iniziale dall'indirizzo (senza animazione)
   subscribe(render);                                                          // 3. ogni cambio di stato -> render
   render(getState());                                                         // 4. primo render
   registerServiceWorker();

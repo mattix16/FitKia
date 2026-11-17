@@ -31,6 +31,7 @@ export const LIMITS = {                                                    // al
 // Diario (M3)
 export const HISTORY_DAYS = 3;          // giorni di calorie mostrati nello storico
 export const WEIGHT_HISTORY_SHOWN = 7;  // pesi mostrati nell'elenco
+export const WEIGHT_CHART_POINTS = 30;  // ultimi pesi disegnati nel grafico
 export const MAX_SUPPLEMENTS = 10;
 export const MAX_CUSTOM_FOODS = 50;
 export const RECENT_FOODS_SHOWN = 8;  // chip "Recenti" nel pannello
@@ -45,8 +46,8 @@ export const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;               // ~4
 
 // I pasti: id stabili (si salvano), etichette solo per la UI. Un posto solo, usato da UI, log e test.
 export const MEALS = [
-  { id: 'breakfast', label: 'Colazione' },
-  { id: 'lunch',     label: 'Pranzo' },
-  { id: 'dinner',    label: 'Cena' },
-  { id: 'snack',     label: 'Snack' },
+  { id: 'breakfast', label: 'Colazione', empty: 'Aggiungi la colazione' },
+  { id: 'lunch',     label: 'Pranzo',    empty: 'Aggiungi il pranzo' },
+  { id: 'dinner',    label: 'Cena',      empty: 'Aggiungi la cena' },
+  { id: 'snack',     label: 'Snack',     empty: 'Aggiungi uno snack' },
 ];

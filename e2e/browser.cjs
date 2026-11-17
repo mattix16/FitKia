@@ -9,10 +9,12 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   const errors = []; page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push('console: ' + m.text()); });
   // Tailwind e font non sono raggiungibili qui: stub minimo (il CDN vero genera le classi; qui basta nascondere gli elementi .hidden)
+  const theme = fs.readFileSync(root + '/index.html', 'utf8').match(/THEME-START[\s\S]*?THEME-END/)?.[0].replace(/^[^\n]*\n[\s\S]*?(?=:root)/, '') ?? '';
   const lockRule = fs.readFileSync(root + '/index.html', 'utf8').match(/html:has\(dialog\[open\]\)\s*\{[^}]*\}/)?.[0];
   ok('regola CSS di blocco scroll presente in index.html', !!lockRule, lockRule);
-  await page.route('**/cdn.tailwindcss.com/**', r => r.fulfill({ contentType: 'text/javascript', body: `window.tailwind = {}; (()=>{const s=document.createElement('style'); s.textContent='.hidden{display:none !important}${lockRule ?? ''}'; document.head.appendChild(s);})();` }));
+  await page.route('**/cdn.tailwindcss.com/**', r => r.fulfill({ contentType: 'text/javascript', body: `window.tailwind = {}; (()=>{const s=document.createElement('style'); s.textContent=${JSON.stringify('.hidden{display:none !important}' + (lockRule ?? '') + theme)}; document.head.appendChild(s);})();` }));
   await page.route('**/fonts.googleapis.com/**', r => r.fulfill({ contentType: 'text/css', body: '' }));
+  await ctx.addInitScript(() => { window.__vt = 0; const o = document.startViewTransition?.bind(document); if (o) document.startViewTransition = (...a) => { window.__vt++; return o(...a); }; });
   const $ = s => page.locator(s);
   const text = async s => (await $(s).textContent()).trim();
   const visible = s => $(s).isVisible();
@@ -26,12 +28,17 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   await page.click('#onboarding-form button[type=submit]');
   await page.waitForSelector('#app-section', { state: 'visible' });
   ok('dopo onboarding: dashboard con saluto e obiettivo', (await text('#welcome-header')) === 'Ciao, Mattia' && /^\d/.test(await text('#kcal-goal')), await text('#kcal-goal') + ' kcal');
+  ok('pasti vuoti: invitano ad aggiungere', /Aggiungi la colazione/.test(await text('#meal-list')) && /Aggiungi il pranzo/.test(await text('#meal-list')));
+  ok('anello: dasharray applicato via CSS', (await page.evaluate(() => getComputedStyle(document.getElementById('ring-progress')).strokeDasharray)).length > 0);
   ok('nav: 3 link + pulsante +, nessuna voce Profilo', (await $('[data-nav]').count()) === 3 && (await $('[data-nav=profile]').count()) === 0 && (await $('[data-nav=home]').getAttribute('aria-current')) === 'page');
 
   // --- pannello cibi + blocco scroll
   await $('[data-meal-id=lunch]').click();
   ok('pannello aperto per il pranzo', await $('#food-dialog').evaluate(d => d.open) && (await text('#food-dialog-title')) === 'Pranzo');
   ok('BUG scroll: pagina dietro ferma con la finestra aperta', (await page.evaluate(() => getComputedStyle(document.documentElement).overflow)) === 'hidden');
+  await page.mouse.click(4, 4);
+  ok('TOCCO FUORI dal foglio chiude il pannello', !(await $('#food-dialog').evaluate(d => d.open)));
+  await $('[data-meal-id=lunch]').click();
   ok('nessun "Recenti" al primo avvio', !(await visible('#food-quick')));
   await page.fill('#food-search', 'pasta');
   const n = await $('#food-results [data-food-id]').count(); ok('ricerca "pasta"', n >= 1, n + ' risultati');
@@ -46,6 +53,15 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   await $('#food-close').click();
   ok('scroll sbloccato a finestra chiusa', (await page.evaluate(() => getComputedStyle(document.documentElement).overflow)) !== 'hidden');
   const eaten1 = await text('#kcal-eaten'); ok('consumate aggiornate e dati salvati', eaten1 !== '0' && !!(await page.evaluate(() => localStorage.getItem('fitkia:v1:logs'))), eaten1 + ' kcal');
+
+  // --- oltre l'obiettivo (poi si annulla)
+  await $('[data-meal-id=lunch]').click();
+  await page.fill('#food-search', 'olio'); await $('#food-results [data-food-id]').first().click(); await page.fill('#food-grams', '1000'); await $('#food-add').click();
+  const cls = id => page.evaluate(i => document.getElementById(i).className, id);
+  ok('OLTRE obiettivo: numero, etichetta e anello in colore di errore', /text-danger/.test(await cls('kcal-remaining')) && /text-danger/.test(await cls('kcal-remaining-label')) && /stroke-danger/.test(await page.evaluate(() => document.getElementById('ring-progress').getAttribute('class'))) && /eccesso/.test(await text('#kcal-remaining-label')));
+  await $('#food-undo [data-undo]').click();
+  ok('annullando, torna il colore normale', !/text-danger/.test(await cls('kcal-remaining')) && /text-ink/.test(await cls('kcal-remaining')) && /rimanenti/.test(await text('#kcal-remaining-label')));
+  await $('#food-close').click();
 
   // --- recenti, rimozione con annulla
   await $('[data-meal-id=lunch]').click();
@@ -99,6 +115,15 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   await $('[data-water="500"]').click(); ok('acqua +500 ml', /0,5 L/.test(await text('#water-total')), await text('#water-total'));
   await page.fill('#weight-form [name=weightKg]', '79.4'); await $('#weight-form button[type=submit]').click();
   ok('peso registrato', /79,4 kg/.test(await text('#weight-list')));
+  ok('grafico peso nascosto con un solo peso', await $('#weight-chart').evaluate(e => e.classList.contains('hidden')));
+  await page.evaluate(() => {
+    const key = d => d.toLocaleDateString('sv-SE'); const old = new Date(); old.setDate(old.getDate() - 4);
+    const raw = JSON.parse(localStorage.getItem('fitkia:v1:habits')); raw.data.weight.unshift({ date: key(old), kg: 81.2 });
+    localStorage.setItem('fitkia:v1:habits', JSON.stringify(raw));
+  });
+  await page.reload(); await page.waitForSelector('[data-view=diary]', { state: 'visible' });
+  ok('GRAFICO PESO: visibile con 2 pesi, linea e descrizione', !(await $('#weight-chart').evaluate(e => e.classList.contains('hidden'))) && /^M/.test(await $('#weight-chart path').getAttribute('d')) && /Andamento del peso: da 81,2 a 79,4/.test(await $('#weight-chart').getAttribute('aria-label')), await $('#weight-chart').getAttribute('aria-label'));
+  ok('grafico: 2 punti e 2 etichette', (await $('#weight-chart circle').count()) === 2 && (await $('#weight-chart text').count()) === 2);
   await page.fill('#supplement-form [name=name]', 'Creatina'); await $('#supplement-form button[type=submit]').click();
   await $('#supplements-list input[type=checkbox]').check(); ok('integratore spuntato', await $('#supplements-list input[type=checkbox]').isChecked());
   ok('storico: oggi, ieri, l\'altro ieri', (await $('#history-list li').count()) === 3);
@@ -109,7 +134,7 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   const [download] = await Promise.all([page.waitForEvent('download'), $('#export-button').click()]);
   const file = '/tmp/backup.json'; await download.saveAs(file);
   const backup = JSON.parse(fs.readFileSync(file, 'utf8'));
-  ok('export: file .json con tutti i dati', /^fitkia-backup-\d{4}-\d{2}-\d{2}\.json$/.test(download.suggestedFilename()) && backup.app === 'fitkia' && backup.habits.weight.length === 1 && Array.isArray(backup.customFoods), download.suggestedFilename());
+  ok('export: file .json con tutti i dati', /^fitkia-backup-\d{4}-\d{2}-\d{2}\.json$/.test(download.suggestedFilename()) && backup.app === 'fitkia' && backup.habits.weight.length === 2 && Array.isArray(backup.customFoods), download.suggestedFilename());
   await $('#delete-button').click(); await $('#delete-confirm').click();
   await page.waitForSelector('#onboarding-section', { state: 'visible' });
   ok('cancellazione: tutto sparito, torna l\'onboarding', (await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fitkia')).length)) === 0);
@@ -122,7 +147,7 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   ok('import file sbagliato: messaggio e nessuna sostituzione', /non è un backup/.test(await text('#import-error')) && !(await $('#import-dialog').evaluate(d => d.open)), await text('#import-error'));
   await $('#import-file').setInputFiles(file);
   await page.waitForFunction(() => document.getElementById('import-dialog').open);
-  ok('import: riepilogo prima di sovrascrivere', /Mattia · \d+ giorni di diario · 1 pesi/.test(await text('#import-summary')), await text('#import-summary'));
+  ok('import: riepilogo prima di sovrascrivere', /Mattia · \d+ giorni di diario · 2 pesi/.test(await text('#import-summary')), await text('#import-summary'));
   await $('#import-confirm').click();
   await $('[data-nav=home]').click();
   await page.waitForSelector('[data-view=home]', { state: 'visible' });   // hashchange è asincrono: si aspetta la vista
@@ -136,6 +161,25 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     ok('MEZZANOTTE: tornando sull\'app la data si aggiorna', d1 !== (await text('#date-header')), d1 + ' -> ' + await text('#date-header'));
   } else console.log('SKIP mezzanotte: page.clock non disponibile');
+
+  // --- tema e movimento: tre contesti con profilo già salvato
+  const profile = JSON.stringify({ v: 1, data: { name: 'Mattia', age: 30, weightKg: 80, heightCm: 180, sex: 'male', goal: 'lose', activity: 'sedentary' } });
+  const probe = async options => {
+    const c = await browser.newContext({ viewport: { width: 390, height: 844 }, ...options });
+    await c.route('**/cdn.tailwindcss.com/**', r => r.fulfill({ contentType: 'text/javascript', body: `window.tailwind = {}; (()=>{const s=document.createElement('style'); s.textContent=${JSON.stringify('.hidden{display:none !important}' + theme)}; document.head.appendChild(s);})();` }));
+    await c.route('**/fonts.googleapis.com/**', r => r.fulfill({ contentType: 'text/css', body: '' }));
+    await c.addInitScript(p => { if (!localStorage.getItem('fitkia:v1:profile')) localStorage.setItem('fitkia:v1:profile', p); window.__vt = 0; const o = document.startViewTransition?.bind(document); if (o) document.startViewTransition = (...a) => { window.__vt++; return o(...a); }; }, profile);
+    const p = await c.newPage(); await p.goto('http://localhost:3000/'.replace('http://localhost:3000/', process.env.BASE_URL || 'http://localhost:3000/'));
+    await p.waitForSelector('#app-section', { state: 'visible' });
+    await p.click('[data-nav=diary]'); await p.waitForSelector('[data-view=diary]', { state: 'visible' });
+    const r = { vt: await p.evaluate(() => window.__vt), surface: await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()), scheme: await p.evaluate(() => getComputedStyle(document.documentElement).colorScheme) };
+    await c.close(); return r;
+  };
+  const light = await probe({ colorScheme: 'light' }), dark = await probe({ colorScheme: 'dark' }), reduced = await probe({ reducedMotion: 'reduce' });
+  ok('TEMA: chiaro = superficie bianca', light.surface === '255 255 255' && light.scheme === 'light', JSON.stringify(light));
+  ok('TEMA: scuro = superficie scura, segue il telefono', dark.surface === '24 33 28' && dark.scheme === 'dark', JSON.stringify(dark));
+  ok('cambio vista con dissolvenza (se supportata)', light.vt >= 1, 'startViewTransition chiamata ' + light.vt + ' volta/e');
+  ok('"riduci animazioni": nessuna transizione e la navigazione funziona', reduced.vt === 0, 'chiamate: ' + reduced.vt);
 
   ok('nessun errore JavaScript in tutto il percorso', errors.length === 0, errors.join(' | '));
   console.log(`\n${results.filter(Boolean).length}/${results.length} controlli superati`);

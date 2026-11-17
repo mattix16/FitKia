@@ -35,10 +35,10 @@ export function renderSupplements(state) {
   $('supplements-list').innerHTML = state.habits.supplements.map(({ id, name }) => {
     const done = isChecked(state.habits, today, id);
     return `<li class="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-2.5">
-      <label class="flex min-w-0 flex-1 items-center gap-3">
+      <label class="flex min-h-11 min-w-0 flex-1 items-center gap-3">
         <input type="checkbox" data-supplement-id="${esc(id)}" ${done ? 'checked' : ''} class="h-5 w-5 accent-emerald-600">
         <span class="truncate text-sm ${done ? 'text-muted line-through' : ''}">${esc(name)}</span>
       </label>
-      <button type="button" data-remove-id="${esc(id)}" aria-label="Rimuovi ${esc(name)}" class="h-9 w-9 rounded-full bg-tint text-deep">✕</button></li>`;
+      <button type="button" data-remove-id="${esc(id)}" aria-label="Rimuovi ${esc(name)}" class="h-11 w-11 rounded-full bg-tint text-deep">✕</button></li>`;
   }).join('') || '<li class="text-sm text-muted">Nessun integratore: aggiungine uno qui sotto.</li>';
 }

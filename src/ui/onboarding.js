@@ -3,7 +3,7 @@ import { GOAL_OPTIONS, ACTIVITY_OPTIONS, DEFAULT_SETTINGS } from '../config.js';
 import { fillOptions, showFieldErrors } from './forms.js';
 
 // Markup richiesto: <form id="onboarding-form" novalidate> con input/select name="name|age|weightKg|heightCm|sex|goal|activity"
-// e, sotto ogni campo, <p data-error-for="age" role="alert" class="text-sm text-red-700"></p>
+// e, sotto ogni campo, <p data-error-for="age" role="alert" class="text-sm text-danger"></p>
 export function mountOnboarding(form, onValid) {
   fillOptions(form.elements.goal, GOAL_OPTIONS, DEFAULT_SETTINGS.goal);
   fillOptions(form.elements.activity, ACTIVITY_OPTIONS, DEFAULT_SETTINGS.activity);

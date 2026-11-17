@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Fitkia - Diario alimentare e monitoraggio delle calorie">
-  <meta name="theme-color" content="#10B981">
+  <meta name="theme-color" content="#F3F7F5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E1411" media="(prefers-color-scheme: dark)">
   <title>Fitkia</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -14,26 +15,59 @@
   <script>
     tailwind.config = { theme: { extend: {
       fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
-      colors: { ink:'#12201A', muted:'#55655E', track:'#E3EEE9', brand:'#10B981', deep:'#047857', tint:'#E3F6EE', canvas:'#F3F7F5' }
+      // I colori leggono variabili CSS (definite sotto): cambiano da sole in modalità scura. <alpha-value> permette es. text-muted/60.
+      colors: Object.fromEntries(['canvas', 'surface', 'ink', 'muted', 'track', 'brand', 'brand-hover', 'deep', 'tint', 'action', 'danger']
+        .map(name => [name, `rgb(var(--${name}) / <alpha-value>)`]))
     } } };
   </script>
   <style type="text/tailwindcss">
+    /* THEME-START — tema chiaro; il tema scuro segue le impostazioni del telefono (prefers-color-scheme).
+       brand = grafica (anello, barre); action = sfondo dei pulsanti con testo bianco (contrasto >= 4,5:1);
+       deep = testo verde; danger = testo/grafica "oltre l'obiettivo" ed errori. */
+    :root {
+      color-scheme: light;
+      --canvas: 243 247 245; --surface: 255 255 255; --ink: 18 32 26; --muted: 85 101 94; --track: 227 238 233;
+      --brand: 5 150 105; --brand-hover: 6 95 70; --deep: 4 120 87; --tint: 227 246 238; --action: 4 120 87; --danger: 185 28 28;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --canvas: 14 20 17; --surface: 24 33 28; --ink: 232 240 236; --muted: 160 178 168; --track: 44 58 50;
+        --brand: 16 185 129; --brand-hover: 6 95 70; --deep: 52 211 153; --tint: 22 52 40; --action: 4 120 87; --danger: 248 113 113;
+      }
+    }
+    /* THEME-END */
     @layer components {
-      .field-input { @apply w-full rounded-2xl border border-track bg-white px-4 py-3 text-base
+      .field-input { @apply w-full rounded-2xl border border-track bg-surface px-4 py-3 text-base text-ink
         placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand; }
-      .btn-primary { @apply w-full rounded-full bg-brand py-3.5 font-semibold text-white
-        hover:bg-deep focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2; }
-      .eating-button { @apply w-full bg-white rounded-3xl shadow-sm py-3.5 pl-[18px] pr-3.5 flex items-center gap-3 text-left; }
+      .btn-primary { @apply w-full rounded-full bg-action py-3.5 font-semibold text-white
+        hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2; }
+      .eating-button { @apply w-full bg-surface rounded-3xl shadow-sm py-3.5 pl-[18px] pr-3.5 flex items-center gap-3 text-left; }
     }
     /* Con la finestra aperta la pagina dietro non scorre. :has() legge lo stato nativo del <dialog>
        ([open]), quindi funziona anche quando si chiude con Esc, senza codice JS. */
     html:has(dialog[open]) { overflow: hidden; }
+
+    /* Il pannello alimenti è un "foglio" che sale dal basso */
+    .sheet { max-height: 90vh; max-height: 90dvh; }
+    dialog[open].sheet { animation: sheet-up 220ms ease-out; }
+    @keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
+    /* Movimento: poco e breve. */
+    .ring { transition: stroke-dasharray 600ms ease-out; }
+    .animate-toast { animation: toast-in 200ms ease-out; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(4px); } }
+    /* Tastiera: un contorno ben visibile su tutto ciò che si può attivare */
+    :focus-visible { outline: 2px solid rgb(var(--deep)); outline-offset: 2px; }
+    /* Chi ha chiesto "riduci animazioni" nel telefono non ne vede nessuna */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
   </style>
   <!-- type="module": file separati con import/export; è "defer" di default, quindi il DOM è già pronto -->
   <script type="module" src="src/main.js"></script>
 </head>
 
-<body class="bg-canvas text-ink font-sans antialiased">
+<body class="bg-canvas text-ink font-sans antialiased tabular-nums">
 
   <!-- VISTA 1: onboarding. Parte nascosta: la mostra render() in main.js solo se manca il profilo -->
   <section id="onboarding-section" class="hidden mx-auto max-w-md px-5 pt-14 pb-10">
@@ -45,25 +79,25 @@
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Nome</span>
         <input name="name" type="text" autocomplete="given-name" placeholder="Il tuo nome" class="field-input">
-        <p data-error-for="name" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="name" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Età</span>
         <input name="age" type="number" inputmode="numeric" placeholder="Anni" class="field-input">
-        <p data-error-for="age" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="age" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Peso (kg)</span>
         <input name="weightKg" type="number" step="0.1" inputmode="decimal" placeholder="Es. 72,5" class="field-input">
-        <p data-error-for="weightKg" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="weightKg" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Altezza (cm)</span>
         <input name="heightCm" type="number" inputmode="numeric" placeholder="Es. 175" class="field-input">
-        <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <label class="flex flex-col gap-1.5">
@@ -73,19 +107,19 @@
           <option value="male">Maschio</option>
           <option value="female">Femmina</option>
         </select>       
-        <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Obiettivo</span>
         <select name="goal" class="field-input"></select>
-        <p data-error-for="goal" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="goal" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <label class="flex flex-col gap-1.5">
         <span class="text-sm font-medium">Livello di attività</span>
         <select name="activity" class="field-input"></select>
-        <p data-error-for="activity" role="alert" class="min-h-5 text-sm text-red-700"></p>
+        <p data-error-for="activity" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
       <button type="submit" class="btn-primary mt-2">Salva e inizia</button>
@@ -104,12 +138,12 @@
 
     <main class="mx-auto flex max-w-md flex-col gap-4 px-5 pt-4">
       <!-- Card calorie -->
-      <section aria-label="Calorie di oggi" class="flex items-center gap-5 rounded-[28px] bg-white p-[22px] shadow-md">
+      <section aria-label="Calorie di oggi" class="flex items-center gap-5 rounded-[28px] bg-surface p-[22px] shadow-md">
         <div class="relative h-[150px] w-[150px] shrink-0">
 
           <svg aria-hidden="true" class="-rotate-90" width="150" height="150" viewBox="0 0 150 150">
             <circle cx="75" cy="75" r="64" fill="none" class="stroke-track" stroke-width="14"/>
-            <circle id="ring-progress" cx="75" cy="75" r="64" fill="none" class="stroke-brand" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 402.1"/>
+            <circle id="ring-progress" cx="75" cy="75" r="64" fill="none" class="ring stroke-brand" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 402.1"/>
           </svg>
 
           <div class="absolute inset-0 flex flex-col items-center justify-center">
@@ -128,7 +162,7 @@
       </section>
 
       <!-- Macro e diario: il contenuto lo GENERA il JS da array di dati (niente markup copiato) -->
-      <section id="macros" aria-label="Macronutrienti" class="flex gap-4 rounded-3xl bg-white px-5 py-[18px] shadow-sm"></section>
+      <section id="macros" aria-label="Macronutrienti" class="flex gap-4 rounded-3xl bg-surface px-5 py-[18px] shadow-sm"></section>
 
       <h2 class="mt-1.5 text-lg font-extrabold tracking-tight">Diario alimentare</h2>
       <ul id="meal-list" class="flex flex-col gap-3"></ul>
@@ -141,15 +175,15 @@
     <section data-view="diary" class="hidden mx-auto max-w-md px-5 pt-14">
       <h1 class="text-[26px] font-extrabold tracking-tight">Diario</h1>
       <div class="mt-4 flex flex-col gap-4">
-        <section id="history-card" aria-labelledby="history-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="history-card" aria-labelledby="history-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="history-title" class="text-lg font-extrabold tracking-tight">Ultimi 3 giorni</h2>
           <ul id="history-list" class="mt-3 flex flex-col gap-3"></ul>
         </section>
-        <section id="water-card" aria-labelledby="water-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="water-card" aria-labelledby="water-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="water-title" class="text-lg font-extrabold tracking-tight">Acqua</h2>
           <p id="water-total" class="mt-2 text-3xl font-extrabold tracking-tight"></p>
           <div id="water-bar" role="progressbar" aria-label="Acqua di oggi" aria-valuemin="0" class="mt-3 h-2.5 rounded bg-track">
-            <div id="water-fill" class="h-2.5 rounded bg-sky-500" style="width:0%"></div>
+            <div id="water-fill" class="h-2.5 rounded bg-sky-500 transition-[width] duration-500 ease-out" style="width:0%"></div>
           </div>
           <div class="mt-3 flex gap-2">
             <button type="button" data-water="-250" class="h-11 flex-1 rounded-full bg-tint text-sm font-semibold text-deep">−250 ml</button>
@@ -157,17 +191,18 @@
             <button type="button" data-water="500" class="h-11 flex-1 rounded-full bg-tint text-sm font-semibold text-deep">+500 ml</button>
           </div>
         </section>
-        <section id="weight-card" aria-labelledby="weight-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="weight-card" aria-labelledby="weight-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="weight-title" class="text-lg font-extrabold tracking-tight">Peso</h2>
           <form id="weight-form" novalidate class="mt-3 flex items-start gap-2">
             <label class="flex-1"><span class="sr-only">Peso di oggi (kg)</span>
               <input name="weightKg" type="number" step="0.1" inputmode="decimal" placeholder="Peso di oggi (kg)" class="field-input"></label>
             <button type="submit" class="btn-primary !w-auto px-5">Salva</button>
           </form>
-          <p id="weight-error" role="alert" class="min-h-5 text-sm text-red-700"></p>
+          <p id="weight-error" role="alert" class="min-h-5 text-sm text-danger"></p>
+          <svg id="weight-chart" class="mt-2 hidden w-full" viewBox="0 0 320 120" role="img" aria-label=""></svg>
           <ul id="weight-list" class="mt-1 flex flex-col gap-2"></ul>
         </section>
-        <section id="supplements-card" aria-labelledby="supplements-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="supplements-card" aria-labelledby="supplements-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="supplements-title" class="text-lg font-extrabold tracking-tight">Integratori</h2>
           <ul id="supplements-list" class="mt-3 flex flex-col gap-2"></ul>
           <form id="supplement-form" novalidate class="mt-3 flex items-start gap-2">
@@ -175,7 +210,7 @@
               <input name="name" type="text" autocomplete="off" placeholder="Es. Creatina" class="field-input"></label>
             <button type="submit" class="btn-primary !w-auto px-5">Aggiungi</button>
           </form>
-          <p id="supplement-error" role="alert" class="min-h-5 text-sm text-red-700"></p>
+          <p id="supplement-error" role="alert" class="min-h-5 text-sm text-danger"></p>
         </section>
       </div>
     </section>
@@ -184,7 +219,7 @@
     <section data-view="settings" class="hidden mx-auto max-w-md px-5 pt-14">
       <h1 class="text-[26px] font-extrabold tracking-tight">Impostazioni</h1>
       <div class="mt-4 flex flex-col gap-4">
-        <section id="goal-card" aria-labelledby="goal-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="goal-card" aria-labelledby="goal-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="goal-title" class="text-lg font-extrabold tracking-tight">Obiettivo e attività</h2>
           <form id="goal-form" novalidate class="mt-3 flex flex-col gap-3">
             <label class="flex flex-col gap-1.5">
@@ -197,61 +232,61 @@
             </label>
             <p id="goal-current" class="text-sm font-semibold text-deep"></p>
             <p id="goal-preview" class="min-h-5 text-sm text-muted"></p>
-            <p id="goal-error" role="alert" class="min-h-5 text-sm text-red-700"></p>
+            <p id="goal-error" role="alert" class="min-h-5 text-sm text-danger"></p>
             <p id="goal-status" role="status" class="min-h-5 text-sm text-deep"></p>
             <button type="submit" class="btn-primary">Salva</button>
           </form>
         </section>
-        <section id="personal-card" aria-labelledby="personal-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="personal-card" aria-labelledby="personal-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="personal-title" class="text-lg font-extrabold tracking-tight">Dati personali</h2>
           <p class="mt-1 text-sm text-muted">Cambiando peso, età o altezza i target si ricalcolano.</p>
           <form id="personal-form" novalidate class="mt-3 flex flex-col gap-3">
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Nome</span>
               <input name="name" type="text" autocomplete="given-name" class="field-input">
-              <p data-error-for="name" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+              <p data-error-for="name" role="alert" class="min-h-5 text-sm text-danger"></p></label>
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Età</span>
               <input name="age" type="number" inputmode="numeric" class="field-input">
-              <p data-error-for="age" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+              <p data-error-for="age" role="alert" class="min-h-5 text-sm text-danger"></p></label>
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Peso (kg)</span>
               <input name="weightKg" type="number" step="0.1" inputmode="decimal" class="field-input">
-              <p data-error-for="weightKg" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+              <p data-error-for="weightKg" role="alert" class="min-h-5 text-sm text-danger"></p></label>
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Altezza (cm)</span>
               <input name="heightCm" type="number" inputmode="numeric" class="field-input">
-              <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+              <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-danger"></p></label>
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Sesso</span>
               <select name="sex" class="field-input"><option value="male">Maschio</option><option value="female">Femmina</option></select>
-              <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+              <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-danger"></p></label>
             <p id="personal-status" role="status" class="min-h-5 text-sm text-deep"></p>
             <button type="submit" class="btn-primary">Salva e ricalcola</button>
           </form>
         </section>
-        <section id="data-card" aria-labelledby="data-title" class="rounded-3xl bg-white p-5 shadow-sm">
+        <section id="data-card" aria-labelledby="data-title" class="rounded-3xl bg-surface p-5 shadow-sm">
           <h2 id="data-title" class="text-lg font-extrabold tracking-tight">I tuoi dati</h2>
           <div class="mt-3 flex flex-col gap-3">
             <button id="export-button" type="button" class="h-12 rounded-full bg-tint font-semibold text-deep">Esporta i miei dati (.json)</button>
             <button id="import-button" type="button" class="h-12 rounded-full bg-tint font-semibold text-deep">Importa un backup (.json)</button>
             <input id="import-file" type="file" accept=".json,application/json" tabindex="-1" aria-hidden="true" class="sr-only">
-            <p id="import-error" role="alert" class="min-h-5 text-sm text-red-700"></p>
+            <p id="import-error" role="alert" class="min-h-5 text-sm text-danger"></p>
             <p id="import-status" role="status" class="min-h-5 text-sm text-deep"></p>
-            <button id="delete-button" type="button" class="h-12 rounded-full border border-red-300 font-semibold text-red-700">Elimina tutti i dati</button>
+            <button id="delete-button" type="button" class="h-12 rounded-full border border-danger/40 font-semibold text-danger">Elimina tutti i dati</button>
           </div>
         </section>
       </div>
     </section>
 
     <nav aria-label="Navigazione principale" class="fixed inset-x-0 bottom-0">
-      <div class="mx-auto flex max-w-md items-center justify-between rounded-t-[28px] bg-white px-6 pt-2.5 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_12px_rgba(18,32,26,0.06)]">
+      <div class="mx-auto flex max-w-md items-center justify-between rounded-t-[28px] bg-surface px-6 pt-2.5 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_12px_rgba(18,32,26,0.06)]">
         <a href="#home" data-nav="home" class="flex h-[52px] w-20 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a>
         <a href="#diary" data-nav="diary" class="flex h-[52px] w-20 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Diario</a>
-        <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="-mt-6 h-14 w-14 rounded-full bg-brand text-3xl leading-none text-white shadow-[0_6px_14px_rgba(16,185,129,0.35)]">+</button>
+        <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="-mt-6 h-14 w-14 rounded-full bg-action text-3xl leading-none text-white shadow-[0_6px_14px_rgba(16,185,129,0.35)]">+</button>
         <a href="#settings" data-nav="settings" class="flex h-[52px] w-20 flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Impostazioni</a>
       </div>
     </nav>
   </section>
 
   <!-- FINESTRA "aggiungi alimento": <dialog> è nativo (showModal/close, tasto Esc e focus gestiti dal browser) -->
-  <dialog id="food-dialog" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl p-0 shadow-xl backdrop:bg-black/40">
-    <div class="flex flex-col gap-4 p-5">
+  <dialog id="food-dialog" class="sheet mx-auto mb-0 mt-auto w-full max-w-md overscroll-contain rounded-b-none rounded-t-3xl bg-surface p-0 text-ink shadow-xl backdrop:bg-black/40">
+    <div class="flex flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <div class="flex items-center justify-between">
         <h2 id="food-dialog-title" class="text-lg font-extrabold tracking-tight"></h2>
         <button id="food-close" type="button" aria-label="Chiudi" class="h-11 w-11 rounded-full bg-tint text-xl text-deep">✕</button>
@@ -282,19 +317,19 @@
           <p class="text-xs text-muted">Scrivi i valori per 100 g, come sull'etichetta.</p>
           <label class="flex flex-col gap-1"><span class="text-sm font-medium">Nome</span>
             <input name="name" type="text" autocomplete="off" class="field-input">
-            <p data-error-for="name" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+            <p data-error-for="name" role="alert" class="min-h-5 text-sm text-danger"></p></label>
           <label class="flex flex-col gap-1"><span class="text-sm font-medium">Calorie (kcal)</span>
             <input name="kcal" type="number" inputmode="decimal" class="field-input">
-            <p data-error-for="kcal" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+            <p data-error-for="kcal" role="alert" class="min-h-5 text-sm text-danger"></p></label>
           <label class="flex flex-col gap-1"><span class="text-sm font-medium">Proteine (g)</span>
             <input name="protein" type="number" step="0.1" inputmode="decimal" class="field-input">
-            <p data-error-for="protein" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+            <p data-error-for="protein" role="alert" class="min-h-5 text-sm text-danger"></p></label>
           <label class="flex flex-col gap-1"><span class="text-sm font-medium">Carboidrati (g)</span>
             <input name="carbs" type="number" step="0.1" inputmode="decimal" class="field-input">
-            <p data-error-for="carbs" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+            <p data-error-for="carbs" role="alert" class="min-h-5 text-sm text-danger"></p></label>
           <label class="flex flex-col gap-1"><span class="text-sm font-medium">Grassi (g)</span>
             <input name="fat" type="number" step="0.1" inputmode="decimal" class="field-input">
-            <p data-error-for="fat" role="alert" class="min-h-5 text-sm text-red-700"></p></label>
+            <p data-error-for="fat" role="alert" class="min-h-5 text-sm text-danger"></p></label>
           <button type="submit" class="btn-primary">Salva alimento</button>
         </form>
       </details>
@@ -305,17 +340,17 @@
       </div>
     </div>
   </dialog>
-  <dialog id="import-dialog" aria-labelledby="import-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl p-0 shadow-xl backdrop:bg-black/40">
+  <dialog id="import-dialog" aria-labelledby="import-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink shadow-xl backdrop:bg-black/40">
     <div class="flex flex-col gap-4 p-5">
       <h2 id="import-title" class="text-lg font-extrabold tracking-tight">Ripristinare questo backup?</h2>
       <p id="import-summary" class="text-sm font-semibold"></p>
       <p class="text-sm text-muted">I dati che hai ora su questo dispositivo verranno sostituiti da quelli del file.</p>
-      <button id="import-confirm" type="button" class="h-12 rounded-full bg-brand font-semibold text-white">Sì, ripristina</button>
+      <button id="import-confirm" type="button" class="h-12 rounded-full bg-action font-semibold text-white">Sì, ripristina</button>
       <button id="import-cancel" type="button" class="h-12 rounded-full bg-tint font-semibold text-deep">Annulla</button>
     </div>
   </dialog>
 
-  <dialog id="delete-dialog" aria-labelledby="delete-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl p-0 shadow-xl backdrop:bg-black/40">
+  <dialog id="delete-dialog" aria-labelledby="delete-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink shadow-xl backdrop:bg-black/40">
     <div class="flex flex-col gap-4 p-5">
       <h2 id="delete-title" class="text-lg font-extrabold tracking-tight">Eliminare tutti i dati?</h2>
       <p class="text-sm text-muted">Profilo, diario dei pasti, acqua, peso e integratori verranno cancellati da questo dispositivo. L'operazione non si può annullare: se vuoi una copia, esporta prima i dati.</p>

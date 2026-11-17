@@ -35,11 +35,11 @@ export function renderDashboard(state) {
   setText('kcal-remaining-label', over ? 'kcal in eccesso' : 'kcal rimanenti');
 
   const ring = $('ring-progress');
-  ring.setAttribute('stroke-dasharray', ringDashArray(eaten, goal));
-  swapClass(ring, over, 'stroke-red-500', 'stroke-brand');
+  ring.style.strokeDasharray = ringDashArray(eaten, goal);   // via CSS: così la transizione .ring lo anima
+  swapClass(ring, over, 'stroke-danger', 'stroke-brand');
   // Oltre l'obiettivo anche il numero e l'etichetta al centro diventano rossi.
-  swapClass($('kcal-remaining'), over, 'text-red-600', 'text-ink');
-  swapClass($('kcal-remaining-label'), over, 'text-red-600', 'text-muted');
+  swapClass($('kcal-remaining'), over, 'text-danger', 'text-ink');
+  swapClass($('kcal-remaining-label'), over, 'text-danger', 'text-muted');
 
   renderMacros(totals, calculateMacroTargets(goal, profile.weightKg));
   renderMeals($('meal-list'), day);

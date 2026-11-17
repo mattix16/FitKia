@@ -8,7 +8,7 @@ export function renderMeals(container, day) {
     const entries = day[meal.id] ?? [];
     const summary = entries.length > 0
       ? entries.map(entry => entry.name).join(', ')
-      : 'Nessun alimento aggiunto';
+      : meal.empty;                                            // es. "Aggiungi il pranzo": invita invece di dire "vuoto"
 
     return `<li><button type="button" class="eating-button" data-meal-id="${meal.id}">
       <span class="flex-1 min-w-0"><span class="block text-[15px] font-bold">${meal.label}</span>

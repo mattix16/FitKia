@@ -6,7 +6,7 @@ let timer;
  *  Sta DENTRO la finestra e non in un elemento fisso della pagina: una <dialog> modale copre tutto il resto. */
 export function showUndo(container, message, onUndo, ms = 5000) {
   clearTimeout(timer);
-  container.innerHTML = `<span class="flex-1">${escapeHtml(message)}</span>
+  container.innerHTML = `<span class="animate-toast flex-1">${escapeHtml(message)}</span>
     <button type="button" data-undo class="font-bold text-deep underline">Annulla</button>`;
   container.querySelector('[data-undo]').addEventListener('click', () => {
     clearTimeout(timer);
