@@ -2,18 +2,22 @@
 import { STORAGE_KEYS } from './config.js';
 import { load, save, remove } from './storage.js';
 import { normalizeProfile } from './profile.js';
-import { emptyDay, addEntry, removeEntry, makeEntry, copyMeal, normalizeLogs, shiftDayKey, todayKey } from './log.js';
+import { emptyDay, addEntry, removeEntry, makeEntry, copyMeal, normalizeLogs, shiftDayKey, todayKey,
+  makeFavorite, applyFavorite, normalizeFavorites } from './log.js';
 import { makeCustomFood, normalizeCustomFoods } from './data/foods.js';
 import { emptyHabits, normalizeHabits, addWater as addWaterTo, addWeight, removeWeight,
   addSupplement, removeSupplement, toggleSupplement as toggleSupplementOn } from './habits.js';
 
 const listeners = new Set();
 // logs:   { '2026-11-12': { breakfast: [...], ... } }   habits: acqua, peso, integratori (vedi habits.js)
-const initialState = () => ({ profile: null, logs: {}, habits: emptyHabits(), customFoods: [], view: 'home' });
+const initialState = () => ({ profile: null, logs: {}, habits: emptyHabits(), customFoods: [], favorites: [], view: 'home' });
 let state = initialState();
 
 export const getState = () => state;
 export const getToday = () => state.logs[todayKey()] ?? emptyDay();
+export const getYesterday = () => state.logs[shiftDayKey(todayKey(), -1)] ?? emptyDay();
+/** Selettore: quanti alimenti ha ieri il pasto `mealId` (0 = niente da copiare). */
+export const yesterdayCount = mealId => getYesterday()[mealId]?.length ?? 0;
 
 export function hydrate() {
   // Ogni lettura passa da un "normalize": profili e dati salvati da versioni precedenti non rompono l'app.
@@ -23,10 +27,11 @@ export function hydrate() {
     logs: normalizeLogs(load(STORAGE_KEYS.logs, {})),
     habits: normalizeHabits(load(STORAGE_KEYS.habits)),
     customFoods: normalizeCustomFoods(load(STORAGE_KEYS.customFoods, [])),
+    favorites: normalizeFavorites(load(STORAGE_KEYS.favorites, [])),   // chiave assente (utenti v3) -> []
   };
 }
 
-const PERSISTED = ['profile', 'logs', 'habits', 'customFoods']; // le chiavi dello stato che finiscono su disco (non `view`)
+const PERSISTED = ['profile', 'logs', 'habits', 'customFoods', 'favorites']; // le chiavi dello stato che finiscono su disco (non `view`)
 
 export function setState(patch) {
   state = { ...state, ...patch };                       // nuovo oggetto: mai modificare lo stato "sul posto"
@@ -73,9 +78,29 @@ export const restoreEntry = (mealId, entry) => setToday(addEntry(getToday(), mea
 /** Copia in oggi gli alimenti di ieri per quel pasto. Restituisce le voci create (per poterle annullare). */
 export function repeatYesterday(mealId) {
   const before = getToday()[mealId];
-  const next = copyMeal(getToday(), state.logs[shiftDayKey(todayKey(), -1)], mealId);
+  const next = copyMeal(getToday(), getYesterday(), mealId);
   setToday(next);
   return next[mealId].slice(before.length);
+}
+
+// ---------- pasti preferiti ----------
+/** Salva gli alimenti ATTUALI di oggi per `mealId` come preferito. `name` arriva già validato (validateFavoriteName). */
+export function saveFavorite(name, mealId) {
+  const favorite = makeFavorite(name, mealId, getToday()[mealId] ?? []);
+  setState({ favorites: [...state.favorites, favorite] });
+  return favorite;
+}
+
+export const deleteFavorite = id => setState({ favorites: state.favorites.filter(f => f.id !== id) });
+
+/** Mette in oggi gli alimenti del preferito. Restituisce le voci create (per l'annulla). */
+export function addFavoriteToMeal(mealId, favoriteId) {
+  const favorite = state.favorites.find(f => f.id === favoriteId);
+  if (!favorite) return [];
+  const before = getToday()[mealId].length;
+  const next = applyFavorite(getToday(), mealId, favorite);
+  setToday(next);
+  return next[mealId].slice(before);
 }
 
 // ---------- alimenti personali ----------
@@ -101,9 +126,16 @@ export function logWeight(kg) {
 }
 
 // ---------- ripristino da backup ----------
-/** `data` arriva da parseBackup (già pulito). Un solo setState: un solo render e un solo salvataggio per chiave. */
-export function restoreAll({ profile, logs, habits, customFoods }) {
-  setState({ profile: normalizeProfile(profile), logs, habits, customFoods });
+/** `data` = value di validateBackup (già controllato e ripulito). Chiamare SOLO se ok === true.
+ *  Un solo setState: un solo render e un solo salvataggio per chiave. I normalize sono una seconda rete di sicurezza. */
+export function restoreAll({ profile, logs, habits, customFoods, favorites = [] }) {
+  setState({
+    profile: normalizeProfile(profile),
+    logs: normalizeLogs(logs),
+    habits: normalizeHabits(habits),
+    customFoods: normalizeCustomFoods(customFoods),
+    favorites: normalizeFavorites(favorites),
+  });
 }
 
 // ---------- cancellazione ----------

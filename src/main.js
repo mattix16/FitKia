@@ -2,7 +2,7 @@
 import { hydrate, getState, setState, saveProfile, subscribe } from './store.js';
 import { defaultMealId, todayKey } from './log.js';
 import { mountOnboarding } from './ui/onboarding.js';
-import { renderDashboard } from './ui/dashboard.js';
+import { mountDashboard, renderDashboard } from './ui/dashboard.js';
 import { renderNav } from './ui/nav.js';
 import { mountSettings, renderSettings } from './ui/settings.js';
 import { mountDiary, renderDiary } from './ui/diary.js';
@@ -57,6 +57,7 @@ function init() {
   hydrate();                                                                  // 1. leggi i dati salvati
   mountOnboarding($('onboarding-form'), saveProfile);    // 2. collega gli eventi (una volta)
   mountMeals($('meal-list'), openFoodPanel);
+  mountDashboard(openFoodPanel);
   mountFoodPanel();
   mountSettings();
   mountDiary();

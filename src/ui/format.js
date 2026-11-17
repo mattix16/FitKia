@@ -15,3 +15,5 @@ export const formatShortDate = key => shortDate.format(parseKey(key));
 export const formatDayLabel = (key, index) => (index === 0 ? 'Oggi' : index === 1 ? 'Ieri' : weekdayDate.format(parseKey(key)));
 /** +0,3 / −0,6 / 0,0 (con il segno meno vero, non il trattino) */
 export const formatSigned = n => `${n > 0 ? '+' : n < 0 ? '−' : ''}${one.format(Math.abs(n))}`;
+/** "1 alimento" / "3 alimenti" */
+export const formatFoodCount = n => `${n} ${n === 1 ? 'alimento' : 'alimenti'}`;

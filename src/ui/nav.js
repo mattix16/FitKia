@@ -1,4 +1,5 @@
 // Evidenzia nella barra in basso la voce della vista attiva (e dice agli screen reader qual è la pagina corrente).
+// La "pillola" colorata dietro l'icona la anima il CSS leggendo aria-current: niente stato duplicato nel JS.
 const ACTIVE = ['text-deep', 'font-bold'];
 const IDLE = ['text-muted', 'font-semibold'];
 

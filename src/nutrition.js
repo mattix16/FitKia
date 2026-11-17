@@ -1,4 +1,4 @@
-import { SEX_OFFSET, ACTIVITY, RING_CIRCUMFERENCE } from './config.js';
+import { SEX_OFFSET, ACTIVITY, RING_CIRCUMFERENCE, MOVING_AVERAGE_DAYS, WEIGHT_CHART } from './config.js';
 
 export function calculateBmr({ weightKg, heightCm, age, sex }) {
   if (!(sex in SEX_OFFSET)) throw new Error(`Sesso non valido: ${sex}`);
@@ -53,4 +53,69 @@ export const toPercent = (value, goal) => (goal <= 0 ? 0 : Math.min(100, Math.ro
 export function isPlausibleFood({ kcal, protein, carbs, fat }) {
   const atwater = 4 * protein + 4 * carbs + 9 * fat;
   return protein + carbs + fat <= 100.5 && Math.abs(atwater - kcal) <= 0.25 * Math.max(atwater, kcal) + 15;
+}
+
+// ---------- Trend del peso: media mobile e coordinate del grafico (PURO: la UI disegna, qui si calcola) ----------
+const MS_PER_DAY = 86_400_000;
+const round1 = n => Math.round(n * 10) / 10;
+/** 'YYYY-MM-DD' -> numero del giorno. Date.UTC evita i salti dell'ora legale (un giorno è sempre lungo 1). */
+const dayNumber = key => { const [y, m, d] = key.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / MS_PER_DAY); };
+
+/** Pesi ordinati per data, uno per giorno (a parità di data vince l'ultimo dell'array). */
+function sortedWeights(entries) {
+  const byDate = new Map(entries.map(entry => [entry.date, entry.kg]));
+  return [...byDate].map(([date, kg]) => ({ date, kg })).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Media mobile del peso su una finestra di `windowDays` giorni di CALENDARIO (non "ultime N pesate"):
+ * se salti dei giorni, la media usa solo le pesate che cadono davvero nella settimana precedente.
+ * @param {{ date: string, kg: number }[]} entries WeightEntry in qualsiasi ordine
+ * @param {number} [windowDays=MOVING_AVERAGE_DAYS]
+ * @returns {{ date: string, kg: number, avgKg: number, samples: number }[]} ordinati per data; avgKg con 1 decimale
+ */
+export function weightMovingAverage(entries, windowDays = MOVING_AVERAGE_DAYS) {
+  const sorted = sortedWeights(entries);
+  const days = sorted.map(entry => dayNumber(entry.date));
+  let start = 0;   // finestra scorrevole: O(n) invece di O(n²)
+  let sum = 0;
+  return sorted.map((entry, i) => {
+    sum += entry.kg;
+    while (days[i] - days[start] >= windowDays) sum -= sorted[start++].kg;
+    const samples = i - start + 1;
+    return { date: entry.date, kg: entry.kg, avgKg: round1(sum / samples), samples };
+  });
+}
+
+/**
+ * Coordinate normalizzate per un grafico SVG del peso: una <polyline> per le pesate e una per la media mobile.
+ * x proporzionale alla DATA; y invertito (più kg = più in alto, in SVG l'asse y scende). Scala minima di 1 kg:
+ * 0,1 kg di differenza non deve sembrare una montagna.
+ * @param {{ date: string, kg: number }[]} entries
+ * @param {{ width?: number, height?: number, padding?: number, windowDays?: number }} [options]
+ * @returns {{ points: { date: string, kg: number, avgKg: number, x: number, y: number, avgY: number }[],
+ *   weightLine: string, averageLine: string, minKg: number | null, maxKg: number | null, grid: { kg: number, y: number }[] }}
+ *   weightLine/averageLine sono già nel formato dell'attributo `points` ("x,y x,y"); vuoti se c'è meno di 2 pesate.
+ */
+export function weightTrendChart(entries, { width = WEIGHT_CHART.width, height = WEIGHT_CHART.height,
+  padding = WEIGHT_CHART.padding, windowDays = MOVING_AVERAGE_DAYS } = {}) {
+  const series = weightMovingAverage(entries, windowDays);
+  if (series.length === 0) return { points: [], weightLine: '', averageLine: '', minKg: null, maxKg: null, grid: [] };
+
+  const values = series.flatMap(p => [p.kg, p.avgKg]);
+  let minKg = Math.min(...values);
+  let maxKg = Math.max(...values);
+  if (maxKg - minKg < 1) { const middle = (minKg + maxKg) / 2; minKg = middle - 0.5; maxKg = middle + 0.5; }
+
+  const firstDay = dayNumber(series[0].date);
+  const spanDays = dayNumber(series.at(-1).date) - firstDay;
+  const innerWidth = width - 2 * padding;
+  const innerHeight = height - 2 * padding;
+  const toX = date => round1(spanDays === 0 ? width / 2 : padding + ((dayNumber(date) - firstDay) / spanDays) * innerWidth);
+  const toY = kg => round1(padding + (1 - (kg - minKg) / (maxKg - minKg)) * innerHeight);
+
+  const points = series.map(p => ({ date: p.date, kg: p.kg, avgKg: p.avgKg, x: toX(p.date), y: toY(p.kg), avgY: toY(p.avgKg) }));
+  const line = key => (points.length < 2 ? '' : points.map(p => `${p.x},${p[key]}`).join(' '));
+  const grid = [maxKg, (minKg + maxKg) / 2, minKg].map(kg => ({ kg: round1(kg), y: toY(kg) }));
+  return { points, weightLine: line('y'), averageLine: line('avgY'), minKg: round1(minKg), maxKg: round1(maxKg), grid };
 }

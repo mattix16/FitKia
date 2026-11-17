@@ -77,7 +77,31 @@ export function copyMeal(day, sourceDay, mealId) {
   return { ...day, [mealId]: [...day[mealId], ...copies] };
 }
 
+// ---------- Pasti preferiti: un nome + gli SNAPSHOT degli alimenti (senza id: gli id nascono quando li rimetti nel diario) ----------
+const snapshot = ({ foodId, name, grams, kcal, protein, carbs, fat }) => ({ foodId, name, grams, kcal, protein, carbs, fat });
+
+/** Crea un preferito dalle voci di un pasto. favorite = { id, name, mealId, items: [{ foodId, name, grams, kcal, ... }] } */
+export const makeFavorite = (name, mealId, entries) => ({ id: newId(), name, mealId, items: entries.map(snapshot) });
+
+/** Aggiunge al pasto `mealId` di `day` una copia (id nuovi) degli alimenti del preferito. I valori restano quelli salvati. */
+export function applyFavorite(day, mealId, favorite) {
+  const entries = favorite.items.map(item => ({ id: newId(), ...snapshot(item) }));
+  return { ...day, [mealId]: [...(day[mealId] ?? []), ...entries] };
+}
+
+/** Totale kcal di un preferito (per l'etichetta "Colazione tipo · 420 kcal"). */
+export const favoriteKcal = favorite => sumEntries(favorite.items).kcal;
+
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/** Preferiti letti dal disco -> solo quelli ben formati (dati vecchi o rovinati non rompono l'app). */
+export function normalizeFavorites(raw) {
+  if (!Array.isArray(raw)) return [];
+  const isItem = i => isObject(i) && typeof i.name === 'string' && ['grams', 'kcal', 'protein', 'carbs', 'fat'].every(k => Number.isFinite(i[k]));
+  return raw
+    .filter(f => isObject(f) && typeof f.id === 'string' && typeof f.name === 'string' && Array.isArray(f.items) && f.items.every(isItem))
+    .map(f => ({ id: f.id, name: f.name, mealId: f.mealId ?? null, items: f.items.map(snapshot) }));
+}
 const isEntry = e => isObject(e) && typeof e.id === 'string' && typeof e.name === 'string'
   && ['grams', 'kcal', 'protein', 'carbs', 'fat'].every(k => Number.isFinite(e[k]));
 
@@ -94,3 +118,22 @@ export function normalizeLogs(raw) {
 
 export const mealTotals = (day, mealId) => sumEntries(day[mealId] ?? []);
 export const dayTotals = day => sumEntries(Object.values(day).flat());
+
+/**
+ * "Prossimo passo" della home: UN solo suggerimento, il più utile adesso. Puro: riceve valori semplici, restituisce dati.
+ * Priorità: pasto dell'ora ancora vuoto (copia da ieri se possibile) > peso al mattino > acqua nel pomeriggio > integratori la sera.
+ * @param {{ hour: number, day: object, yesterday?: object, waterMl: number, waterGoalMl: number,
+ *   hasWeightToday: boolean, supplementsLeft: number }} input
+ * @returns {null | { kind: 'repeat' | 'log' | 'weight' | 'water' | 'supplements', mealId?: string, count?: number }}
+ */
+export function nextStep({ hour, day, yesterday = {}, waterMl, waterGoalMl, hasWeightToday, supplementsLeft }) {
+  const mealId = defaultMealId(hour);
+  if ((day[mealId] ?? []).length === 0) {
+    const count = (yesterday[mealId] ?? []).length;
+    return count > 0 ? { kind: 'repeat', mealId, count } : { kind: 'log', mealId };
+  }
+  if (!hasWeightToday && hour < 12) return { kind: 'weight' };
+  if (hour >= 14 && waterMl < waterGoalMl / 2) return { kind: 'water' };
+  if (hour >= 18 && supplementsLeft > 0) return { kind: 'supplements', count: supplementsLeft };
+  return null;
+}

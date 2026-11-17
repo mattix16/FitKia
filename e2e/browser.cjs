@@ -100,7 +100,7 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   });
   await page.reload(); await page.waitForSelector('#app-section', { state: 'visible' });
   await $('[data-meal-id=lunch]').click();
-  ok('RIPETI IERI: pulsante con il conteggio', (await visible('#food-repeat')) && /\(2\)/.test(await text('#food-repeat')), await text('#food-repeat'));
+  ok('RIPETI IERI: pulsante con il conteggio', (await visible('#food-repeat')) && /\(2 alimenti\)/.test(await text('#food-repeat')), await text('#food-repeat'));
   const before = await $('#food-entries li').count();
   await $('#food-repeat').click();
   ok('ripeti ieri copia 2 voci', (await $('#food-entries li').count()) === before + 2);
@@ -115,15 +115,15 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   await $('[data-water="500"]').click(); ok('acqua +500 ml', /0,5 L/.test(await text('#water-total')), await text('#water-total'));
   await page.fill('#weight-form [name=weightKg]', '79.4'); await $('#weight-form button[type=submit]').click();
   ok('peso registrato', /79,4 kg/.test(await text('#weight-list')));
-  ok('grafico peso nascosto con un solo peso', await $('#weight-chart').evaluate(e => e.classList.contains('hidden')));
+  ok('grafico peso con un solo peso: punto + messaggio, nessuna linea', (await visible('#weight-chart-empty')) && (await $('#weight-chart polyline').count()) === 0 && (await $('#weight-chart circle').count()) === 1);
   await page.evaluate(() => {
     const key = d => d.toLocaleDateString('sv-SE'); const old = new Date(); old.setDate(old.getDate() - 4);
     const raw = JSON.parse(localStorage.getItem('fitkia:v1:habits')); raw.data.weight.unshift({ date: key(old), kg: 81.2 });
     localStorage.setItem('fitkia:v1:habits', JSON.stringify(raw));
   });
   await page.reload(); await page.waitForSelector('[data-view=diary]', { state: 'visible' });
-  ok('GRAFICO PESO: visibile con 2 pesi, linea e descrizione', !(await $('#weight-chart').evaluate(e => e.classList.contains('hidden'))) && /^M/.test(await $('#weight-chart path').getAttribute('d')) && /Andamento del peso: da 81,2 a 79,4/.test(await $('#weight-chart').getAttribute('aria-label')), await $('#weight-chart').getAttribute('aria-label'));
-  ok('grafico: 2 punti e 2 etichette', (await $('#weight-chart circle').count()) === 2 && (await $('#weight-chart text').count()) === 2);
+  ok('GRAFICO PESO: con 2 pesi linea + media tratteggiata e descrizione', !(await visible('#weight-chart-empty')) && (await $('#weight-chart polyline').count()) === 2 && /2 pesate.*Ultimo peso 79,4 kg/.test(await text('#weight-chart-desc')), await text('#weight-chart-desc'));
+  ok('grafico: 2 punti interattivi e 3 linee guida in kg', (await $('#weight-chart [data-point-date]').count()) === 2 && (await $('#weight-chart text').count()) === 3);
   await page.fill('#supplement-form [name=name]', 'Creatina'); await $('#supplement-form button[type=submit]').click();
   await $('#supplements-list input[type=checkbox]').check(); ok('integratore spuntato', await $('#supplements-list input[type=checkbox]').isChecked());
   ok('storico: oggi, ieri, l\'altro ieri', (await $('#history-list li').count()) === 3);
