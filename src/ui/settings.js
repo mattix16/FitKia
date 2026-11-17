@@ -46,9 +46,16 @@ function describeTargets(profile) {
   return `${formatInt(kcal)} kcal · P ${protein} g · C ${carbs} g · G ${fat} g`;
 }
 
+/** Sotto la select: cosa significa il livello scelto (es. "1-3 allenamenti a settimana"). */
+function showActivityHint() {
+  const chosen = ACTIVITY_OPTIONS.find(o => o.id === $('goal-form').elements.activity.value);
+  $('activity-hint').textContent = chosen?.hint ?? '';
+}
+
 export function mountSettings() {
   // --- obiettivo e attività
   const goalForm = $('goal-form');
+  goalForm.elements.activity.addEventListener('change', showActivityHint);
   goalForm.addEventListener('submit', event => {
     event.preventDefault();
     const { ok, errors, value } = validateGoalSettings(Object.fromEntries(new FormData(goalForm)));
@@ -123,8 +130,9 @@ export function mountSettings() {
 export function renderSettings(state) {
   const { profile } = state;
   fillOptions($('goal-form').elements.goal, GOAL_OPTIONS, profile.goal);
-  fillOptions($('goal-form').elements.activity, ACTIVITY_OPTIONS, profile.activity);
-  $('goal-current').textContent = `Obiettivo giornaliero attuale: ${describeTargets(profile)}`;
+  fillOptions($('goal-form').elements.activity, ACTIVITY_OPTIONS.map(({ id, label }) => ({ id, label })), profile.activity); // il dettaglio sta sotto, non nella voce (si tagliava)
+  showActivityHint();
+  $('goal-current').textContent = describeTargets(profile);
   $('goal-preview').textContent = '';
   PERSONAL_FIELDS.forEach(field => { $('personal-form').elements[field].value = profile[field]; });
 }

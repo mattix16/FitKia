@@ -115,27 +115,23 @@
        il contenuto che scorre sotto resta visibile e "colora" la barra. */
     .liquid-glass {
       position: relative; isolation: isolate;
-      background: linear-gradient(135deg, rgb(255 255 255 / .58), rgb(255 255 255 / .30));
+      background: rgb(255 255 255 / .55);
       -webkit-backdrop-filter: blur(18px) saturate(180%) brightness(1.04);
               backdrop-filter: blur(18px) saturate(180%) brightness(1.04);
-      border: 1px solid rgb(255 255 255 / .65);
-      box-shadow: 0 12px 32px -10px rgb(30 30 60 / .22), 0 2px 8px rgb(30 30 60 / .06),
-                  inset 0 1px 1px rgb(255 255 255 / .95), inset 0 -1px 1px rgb(255 255 255 / .35), inset 0 0 14px rgb(255 255 255 / .30);
+      border: 1px solid rgb(255 255 255 / .7);
+      box-shadow: 0 8px 24px -10px rgb(30 30 60 / .25), 0 1px 3px rgb(30 30 60 / .08), inset 0 1px 1px rgb(255 255 255 / .9);
     }
     .liquid-glass::before {           /* riflesso: una "goccia" di luce che scivola sul bordo superiore */
       content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-      background: radial-gradient(120% 90% at 18% -10%, rgb(255 255 255 / .60), transparent 55%),
-                  radial-gradient(80% 60% at 100% 120%, rgb(var(--brand) / .14), transparent 60%);
+      background: linear-gradient(180deg, rgb(255 255 255 / .45), transparent 45%);
     }
     @media (prefers-color-scheme: dark) {
       .liquid-glass {
-        background: linear-gradient(135deg, rgb(255 255 255 / .13), rgb(255 255 255 / .04));
-        border-color: rgb(255 255 255 / .14);
-        box-shadow: 0 14px 36px -10px rgb(0 0 0 / .7), inset 0 1px 1px rgb(255 255 255 / .22),
-                    inset 0 -1px 1px rgb(255 255 255 / .06), inset 0 0 16px rgb(255 255 255 / .05);
+        background: rgb(40 40 46 / .55);
+        border-color: rgb(255 255 255 / .12);
+        box-shadow: 0 10px 28px -10px rgb(0 0 0 / .7), inset 0 1px 1px rgb(255 255 255 / .16);
       }
-      .liquid-glass::before { background: radial-gradient(120% 90% at 18% -10%, rgb(255 255 255 / .16), transparent 55%),
-                                          radial-gradient(80% 60% at 100% 120%, rgb(var(--brand) / .16), transparent 60%); }
+      .liquid-glass::before { background: linear-gradient(180deg, rgb(255 255 255 / .10), transparent 45%); }
     }
     /* Browser senza backdrop-filter: vetro più opaco, così il testo resta leggibile */
     @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -144,16 +140,15 @@
 
     /* Lente della voce attiva: scivola con un rimbalzo "liquido" (--nav-index lo imposta ui/nav.js) e si allunga mentre si muove */
     .nav-lens {
-      position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 3); border-radius: 9999px; z-index: 0;
+      position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 9999px; z-index: 0;
       transform: translateX(calc(var(--nav-index, 0) * 100%));
       transition: transform 520ms cubic-bezier(.34, 1.56, .64, 1);
-      background: rgb(var(--ink) / .07);
-      box-shadow: inset 0 1px 1px rgb(255 255 255 / .8), inset 0 -1px 1px rgb(0 0 0 / .04);
+      background: rgb(var(--ink) / .06);
     }
-    .nav-lens.is-moving { animation: lens-stretch 520ms cubic-bezier(.34, 1.56, .64, 1); }
-    @keyframes lens-stretch { 35% { scale: 1.18 .9; } }
+    .nav-lens.is-moving { animation: lens-stretch 480ms cubic-bezier(.34, 1.56, .64, 1); }
+    @keyframes lens-stretch { 35% { scale: 1.08 .96; } }
     @media (prefers-color-scheme: dark) {
-      .nav-lens { background: rgb(255 255 255 / .12); box-shadow: inset 0 1px 1px rgb(255 255 255 / .25), inset 0 -1px 1px rgb(255 255 255 / .05); }
+      .nav-lens { background: rgb(255 255 255 / .10); }
     }
     .nav-link svg { transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
     .nav-link:active svg { transform: scale(.86); }
@@ -234,7 +229,7 @@
   </section>
 
   <!-- VISTA 2: dashboard -->
-  <section id="app-section" class="hidden mx-auto min-h-screen max-w-md pb-32">
+  <section id="app-section" class="hidden mx-auto min-h-screen max-w-md pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
 
     <!-- VISTA home (la dashboard di prima) -->
     <section data-view="home" class="hidden">
@@ -339,7 +334,7 @@
             </div>
             <div class="relative">
               <svg id="weight-chart" class="w-full overflow-visible" viewBox="0 0 320 150" role="group" aria-describedby="weight-chart-desc"></svg>
-              <p id="weight-chart-empty" class="absolute inset-0 hidden items-end justify-center px-6 pb-1 text-center text-sm text-muted"></p>
+              <p id="weight-chart-empty" class="pointer-events-none absolute inset-0 hidden items-end justify-center px-6 pb-1 text-center text-sm text-muted"></p>
             </div>
             <p id="weight-chart-desc" class="sr-only"></p>
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" aria-hidden="true">
@@ -376,13 +371,17 @@
             </label>
             <label class="flex flex-col gap-1.5">
               <span class="text-sm font-medium">Livello di attività</span>
-              <select name="activity" class="field-input"></select>
+              <select name="activity" class="field-input" aria-describedby="activity-hint"></select>
+              <span id="activity-hint" class="px-1 text-xs text-muted"></span>
             </label>
-            <p id="goal-current" class="text-sm font-semibold text-deep"></p>
-            <p id="goal-preview" class="min-h-5 text-sm text-muted"></p>
-            <p id="goal-error" role="alert" class="min-h-5 text-sm text-danger"></p>
-            <p id="goal-status" role="status" class="min-h-5 text-sm text-deep"></p>
-            <button type="submit" class="btn-primary">Salva</button>
+            <div class="rounded-2xl bg-tint px-4 py-3">
+              <p class="text-xs font-medium text-muted">Obiettivo giornaliero attuale</p>
+              <p id="goal-current" class="mt-0.5 text-sm font-semibold text-deep"></p>
+            </div>
+            <p id="goal-preview" class="px-1 text-sm text-muted empty:hidden"></p>
+            <p id="goal-error" role="alert" class="px-1 text-sm text-danger empty:hidden"></p>
+            <p id="goal-status" role="status" class="px-1 text-sm text-deep empty:hidden"></p>
+            <button type="submit" class="btn-primary mt-1">Salva</button>
           </form>
         </section>
         <section id="personal-card" aria-labelledby="personal-title" class="reveal card" style="--i:2">
@@ -430,21 +429,21 @@
     </section>
 
     <!-- Toast globale: conferme e "Annulla" fuori dal pannello alimenti (es. "Copia da ieri" dalla home) -->
-    <div id="app-toast" role="status" class="fixed inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-2xl empty:hidden"></div>
+    <div id="app-toast" role="status" class="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-2xl empty:hidden"></div>
 
     <!-- Tab bar "Liquid Glass" (iOS 26): capsula di vetro flottante con una lente che scivola sotto la voce attiva,
          e il pulsante Aggiungi come bolla di vetro separata. pointer-events-none sul contenitore: i tocchi tra le due
          bolle arrivano alla pagina sotto. -->
     <nav aria-label="Navigazione principale" class="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div class="mx-auto flex max-w-md items-center gap-3">
-      <div id="nav-tabs" class="liquid-glass pointer-events-auto grid flex-1 grid-cols-3 rounded-full p-1">
+      <div class="mx-auto flex max-w-md items-center gap-2.5">
+      <div id="nav-tabs" class="liquid-glass pointer-events-auto grid flex-1 grid-cols-3 rounded-full p-[3px]">
         <span id="nav-lens" class="nav-lens" aria-hidden="true"></span>
-        <a href="#home" data-nav="home" class="nav-link relative z-10 flex h-[52px] flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="fill-when-active" d="M3.5 10.5L12 3.5l8.5 7V20a1 1 0 0 1-1 1h-4.5v-6h-6v6H4.5a1 1 0 0 1-1-1z"/></svg>Home</a>
-        <a href="#diary" data-nav="diary" class="nav-link relative z-10 flex h-[52px] flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="fill-when-active" x="4.5" y="3" width="15" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Diario</a>
-        <a href="#settings" data-nav="settings" class="nav-link relative z-10 flex h-[52px] flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle class="fill-when-active" cx="15" cy="6" r="2"/><circle class="fill-when-active" cx="9" cy="12" r="2"/><circle class="fill-when-active" cx="17" cy="18" r="2"/></svg>Impostazioni</a>
+        <a href="#home" data-nav="home" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="fill-when-active" d="M3.5 10.5L12 3.5l8.5 7V20a1 1 0 0 1-1 1h-4.5v-6h-6v6H4.5a1 1 0 0 1-1-1z"/></svg>Home</a>
+        <a href="#diary" data-nav="diary" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="fill-when-active" x="4.5" y="3" width="15" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Diario</a>
+        <a href="#settings" data-nav="settings" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle class="fill-when-active" cx="15" cy="6" r="2"/><circle class="fill-when-active" cx="9" cy="12" r="2"/><circle class="fill-when-active" cx="17" cy="18" r="2"/></svg>Impostazioni</a>
       </div>
-      <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="liquid-glass add-action pointer-events-auto flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-full text-deep">
-        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="liquid-glass add-action pointer-events-auto flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full text-deep">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
     </nav>
   </section>

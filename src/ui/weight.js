@@ -77,7 +77,7 @@ function renderChart(weight) {
   empty.textContent = message;
   empty.classList.toggle('hidden', !message);
   empty.classList.toggle('flex', Boolean(message));
-  svg.classList.toggle('opacity-40', points.length < 2);
+  svg.classList.toggle('opacity-40', points.length === 0);   // con 1 pesata il punto è già pienamente visibile
 
   const last = points.at(-1);
   const first = points[0];

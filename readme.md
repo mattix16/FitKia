@@ -1,12 +1,9 @@
-
-
 # Fitkia
 
 > Diario alimentare e monitoraggio delle calorie, **mobile-first** e **offline-first**.
 > Stato del progetto: 🚧 in sviluppo (pre-alpha)
 
-<Todo assignee="Mattia">
- Un app free che si differenzia da tutte tenendo in locale tutti i dati.
+Un'app gratuita che si differenzia dalle altre tenendo **tutti i dati in locale**, sul dispositivo.
 
 ## Indice
 
@@ -27,18 +24,19 @@
 Legenda: ✅ fatto · 🚧 in corso · ⬜ da fare
 
 **MVP**
-- 🚧 Onboarding: nome, età, peso, altezza (cm), sesso, obiettivo
-- 🚧 Calcolo del fabbisogno (BMR Mifflin-St Jeor, TDEE, obiettivo perdere/mantenere/aumentare)
-- 🚧 Dashboard: anello calorie (obiettivo / consumate / rimanenti) e macro (proteine, carboidrati, grassi)
-- ⬜ Diario pasti: colazione, pranzo, cena, snack
-- ⬜ Ricerca alimenti nel dizionario locale con calcolo dinamico per grammatura
+- ✅ Onboarding: nome, età, peso, altezza (cm), sesso, obiettivo
+- ✅ Calcolo del fabbisogno (BMR Mifflin-St Jeor, TDEE, obiettivo perdere/mantenere/aumentare)
+- ✅ Dashboard: anello calorie (obiettivo / consumate / rimanenti) e macro (proteine, carboidrati, grassi)
+- ✅ Diario pasti: colazione, pranzo, cena, snack
+- ✅ Ricerca alimenti nel dizionario locale con calcolo dinamico per grammatura
 - ✅ Water tracker
 - ✅ Weight log con storico
 - ✅ Impostazioni (ricalcolo dei target)
+- ✅ Grafico storico del peso con media mobile a 7 giorni (già visibile dalla prima pesata; ogni pesata, anche l'unica rimasta, si può eliminare)
 
 **Dopo l'MVP**
 - ✅ To-do giornaliera integratori (es. creatina)
-- ⬜ Integrazione Open Food Facts e scansione barcode
+- ✅ Backup e ripristino dei dati in JSON validato, pasti preferiti e "copia da ieri"
 - ⬜ Pacchetto Android (Capacitor)
 
 <Todo assignee="Mattia">
@@ -89,12 +87,15 @@ fitkia/
 ├── sw.js
 ├── src/
 │   ├── config.js        # costanti, limiti, unità
-│   ├── nutrition.js     # logica pura: BMR, target, anello, macro
+│   ├── nutrition.js     # logica pura: BMR, target, anello, macro, grafico peso
+│   ├── habits.js        # logica pura: acqua, peso, integratori
+│   ├── log.js           # logica pura: diario dei pasti
+│   ├── backup.js        # logica pura: export/import JSON
 │   ├── validation.js    # logica pura: form grezzo -> dati tipizzati
 │   ├── storage.js       # unico file che tocca localStorage
 │   ├── store.js         # stato + pub/sub
 │   ├── main.js          # bootstrap
-│   └── ui/              # DOM: onboarding, dashboard, ...
+│   └── ui/              # DOM: onboarding, dashboard, diario, impostazioni, nav, ...
 └── test/
 ```
 
@@ -145,7 +146,7 @@ npm test       # esegue i test della logica pura
 ## PWA e offline
 
 - App shell in precache (HTML, CSS, JS, icone, font self-hosted), cache con nome versionato.
-- Asset statici: cache-first. API esterne (Open Food Facts): network-first con fallback.
+- Asset statici: cache-first. Nessuna API esterna: tutto funziona senza rete.
 - Pulizia delle vecchie cache in `activate`; avviso "nuova versione disponibile" invece di aggiornare di colpo.
 
 <Todo assignee="Mattia">
@@ -164,13 +165,12 @@ Fitkia tratta dati sulla salute. Scelta di progetto: **tutto resta sul dispositi
 
 | Milestone | Contenuto | Stato |
 |---|---|---|
-| **M0 Fondamenta** | README, `config`, `nutrition`, `validation`, `storage`, `store`, test | 🚧 |
-| **M1 Onboarding + Dashboard** | Form validato, persistenza, anello e macro dallo stato | ⬜ |
-| **M2 Diario** | Dizionario cibi, ricerca, grammatura, aggiunta al pasto | ⬜ |
+| **M0 Fondamenta** | README, `config`, `nutrition`, `validation`, `storage`, `store`, test | ✅ |
+| **M1 Onboarding + Dashboard** | Form validato, persistenza, anello e macro dallo stato | ✅ |
+| **M2 Diario** | Dizionario cibi, ricerca, grammatura, aggiunta al pasto | ✅ |
 | **M3 Salute quotidiana** | Acqua, peso, impostazioni, to-do integratori | ✅ |
 | **M4 PWA vera** | Tailwind compilato, font locali, manifest, icone, SW completo | ⬜ |
-| **M5 Dati esterni** | Open Food Facts, barcode | ⬜ |
-| **M6 Android** | Capacitor, notifiche locali | ⬜ |
+| **M5 Android** | Capacitor, notifiche locali | ⬜ |
 
 <Todo assignee="Mattia">
   Per ogni milestone scrivi un "criterio di fatto" (es. M1: "ricarico la pagina e ritrovo i miei dati").
@@ -191,11 +191,6 @@ Breve registro del *perché* delle scelte, per ricordarle fra sei mesi.
 <Todo assignee="Mattia">
   Aggiungi la decisione n. 6 con le tue parole (es. perché `heightCm` e non metri).
 </Todo>
-
-## Crediti e licenza
-
-- Dati alimentari futuri: [Open Food Facts](https://world.openfoodfacts.org/) (licenza ODbL: va citata la fonte).
-- Font: Plus Jakarta Sans.
 
 <Todo assignee="Mattia">
   Scegli una licenza per il codice (MIT è la più comune) e aggiungi il file `LICENSE`.
