@@ -55,7 +55,7 @@ function renderQuick() {
   $('food-favorites').innerHTML = favorites.map(f => `<li class="flex items-center gap-2">
       <button type="button" data-favorite-id="${esc(f.id)}" aria-label="Aggiungi il preferito ${esc(f.name)}: ${formatFoodCount(f.items.length)}, ${favoriteKcal(f)} kcal"
         class="flex min-h-11 flex-1 items-center gap-3 hairline rounded-xl bg-tint/60 px-4 text-left transition active:scale-[.98]">
-        <span aria-hidden="true" class="text-amber-500">★</span>
+        <span aria-hidden="true" class="text-fat">★</span>
         <span class="min-w-0 flex-1 truncate text-sm font-semibold">${esc(f.name)}</span>
         <span class="text-xs text-muted">${f.items.length} · ${favoriteKcal(f)} kcal</span></button>
       <button type="button" data-delete-favorite-id="${esc(f.id)}" aria-label="Elimina il preferito ${esc(f.name)}" class="h-11 w-11 shrink-0 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`).join('');

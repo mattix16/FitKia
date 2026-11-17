@@ -4,9 +4,9 @@ import { mealTotals } from '../log.js';
 import { repeatYesterday, removeFood } from '../store.js';
 import { showUndo } from './toast.js';
 import { formatFoodCount } from './format.js';
+import { toneIcon } from './icons.js';
 
 const fmt = new Intl.NumberFormat('it-IT');
-const MEAL_ICONS = { breakfast: '☕', lunch: '🍝', dinner: '🍽️', snack: '🍎' };
 
 export function renderMeals(container, day, yesterday = {}) {
   container.innerHTML = MEALS.map(meal => {
@@ -17,7 +17,7 @@ export function renderMeals(container, day, yesterday = {}) {
 
     return `<li class="flex flex-col gap-1.5">
       <button type="button" class="eating-button" data-meal-id="${meal.id}">
-        <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tint text-lg">${MEAL_ICONS[meal.id]}</span>
+        ${toneIcon(meal.id)}
         <span class="flex-1 min-w-0"><span class="block text-[15px] font-semibold">${meal.label}</span>
           <span class="mt-0.5 block truncate text-xs text-muted" data-summary-for="${meal.id}"></span>
           <span class="mt-0.5 block text-xs font-semibold tabular-nums">${fmt.format(mealTotals(day, meal.id).kcal)} <span class="font-medium text-muted">kcal</span></span></span>

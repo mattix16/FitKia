@@ -6,6 +6,7 @@ import { addWater, repeatYesterday, removeFood } from '../store.js';
 import { renderMeals } from './meals.js';
 import { showUndo } from './toast.js';
 import { formatLiters, formatDecimal, formatFoodCount } from './format.js';
+import { toneIcon } from './icons.js';
 
 const $ = id => document.getElementById(id);
 const setText = (id, text) => { $(id).textContent = text; };
@@ -27,11 +28,11 @@ const MACROS = [
 
 /** Contenuto della card "prossimo passo": testo + UNA azione. Tutte le stringhe sono nostre (niente input utente). */
 const STEP_VIEWS = {
-  repeat: s => ({ icon: '↻', title: `${mealLabel(s.mealId)} come ieri?`, text: `Copia ${formatFoodCount(s.count)} di ieri con un tocco.`, action: `<button type="button" data-step="repeat" data-meal="${s.mealId}" class="btn-primary !w-auto px-4 !py-2 text-sm">Copia</button>` }),
-  log: s => ({ icon: '🍽️', title: `È ora: ${mealLabel(s.mealId).toLowerCase()}`, text: 'Registrala ora, così il conteggio resta preciso.', action: `<button type="button" data-step="log" data-meal="${s.mealId}" class="btn-primary !w-auto px-4 !py-2 text-sm">Aggiungi</button>` }),
-  weight: () => ({ icon: '⚖️', title: 'Pesati stamattina', text: 'A digiuno e alla stessa ora: il trend è più affidabile.', action: '<a href="#diary" class="btn-soft inline-flex h-9 items-center px-4 text-sm">Vai</a>' }),
-  water: () => ({ icon: '💧', title: 'Un bicchiere d\'acqua?', text: 'Sei sotto metà dell\'obiettivo di oggi.', action: '<button type="button" data-water="250" class="btn-soft h-9 px-4 text-sm">+250 ml</button>' }),
-  supplements: s => ({ icon: '✅', title: `${s.count} ${s.count === 1 ? 'integratore' : 'integratori'} da spuntare`, text: 'Chiudi la giornata con la to-do completa.', action: '<a href="#diary" class="btn-soft inline-flex h-9 items-center px-4 text-sm">Apri</a>' }),
+  repeat: s => ({ title: `${mealLabel(s.mealId)} come ieri?`, text: `Copia ${formatFoodCount(s.count)} di ieri con un tocco.`, action: `<button type="button" data-step="repeat" data-meal="${s.mealId}" class="btn-primary !w-auto px-4 !py-2 text-sm">Copia</button>` }),
+  log: s => ({ title: `È ora: ${mealLabel(s.mealId).toLowerCase()}`, text: 'Registrala ora, così il conteggio resta preciso.', action: `<button type="button" data-step="log" data-meal="${s.mealId}" class="btn-primary !w-auto px-4 !py-2 text-sm">Aggiungi</button>` }),
+  weight: () => ({ title: 'Pesati stamattina', text: 'A digiuno e alla stessa ora: il trend è più affidabile.', action: '<a href="#diary" class="btn-soft inline-flex h-9 items-center px-4 text-sm">Vai</a>' }),
+  water: () => ({ title: 'Un bicchiere d\'acqua?', text: 'Sei sotto metà dell\'obiettivo di oggi.', action: '<button type="button" data-water="250" class="btn-soft h-9 px-4 text-sm">+250 ml</button>' }),
+  supplements: s => ({ title: `${s.count} ${s.count === 1 ? 'integratore' : 'integratori'} da spuntare`, text: 'Chiudi la giornata con la to-do completa.', action: '<a href="#diary" class="btn-soft inline-flex h-9 items-center px-4 text-sm">Apri</a>' }),
 };
 
 let openPanel = () => {};
@@ -109,7 +110,7 @@ export function renderDashboard(state) {
   if (step) {
     const view = STEP_VIEWS[step.kind](step);
     card.innerHTML = `<div class="hairline flex items-center gap-3 rounded-2xl bg-surface p-4">
-      <span aria-hidden="true" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-tint text-lg">${view.icon}</span>
+      ${toneIcon(step.kind, { box: "h-11 w-11 rounded-xl" })}
       <div class="min-w-0 flex-1"><p class="text-sm font-bold">${view.title}</p><p class="text-xs text-muted">${view.text}</p></div>
       ${view.action}</div>`;
   }
