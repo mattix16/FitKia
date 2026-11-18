@@ -2,10 +2,10 @@
 import { STORAGE_KEYS } from './config.js';
 import { load, save, remove } from './storage.js';
 import { normalizeProfile } from './profile.js';
-import { emptyDay, addEntry, removeEntry, makeEntry, copyMeal, normalizeLogs, shiftDayKey, todayKey,
+import { emptyDay, addEntry, removeEntry, replaceEntry as replaceEntryIn, scaleEntry, makeEntry, copyMeal, normalizeLogs, shiftDayKey, todayKey,
   makeFavorite, applyFavorite, normalizeFavorites } from './log.js';
 import { makeCustomFood, normalizeCustomFoods } from './data/foods.js';
-import { emptyHabits, normalizeHabits, addWater as addWaterTo, addWeight, removeWeight,
+import { emptyHabits, normalizeHabits, addWater as addWaterTo, addWeight, removeWeight, weightOnOr,
   addSupplement, removeSupplement, toggleSupplement as toggleSupplementOn } from './habits.js';
 
 const listeners = new Set();
@@ -55,6 +55,19 @@ export function updateProfile(patch) {
   saveProfile({ ...state.profile, ...patch });
 }
 
+/** Salva i dati personali (value = esito di validateProfile). Se il peso è cambiato rispetto a quello che l'app conosce per oggi
+ *  (la pesata di oggi, o in mancanza il peso del profilo) registra anche la pesata: grafico e profilo restano sincronizzati.
+ *  addWeight tiene UNA pesata per giorno, quindi non nascono doppioni. Un solo setState: un solo salvataggio e un solo render.
+ *  Restituisce true se ha registrato una pesata. */
+export function savePersonalData(value) {
+  const today = todayKey();
+  const kg = Math.round(value.weightKg * 10) / 10;                 // come validateWeightInput: 1 decimale
+  const weightChanged = kg !== weightOnOr(state.habits, today, state.profile.weightKg);
+  const profile = normalizeProfile({ ...state.profile, ...value, weightKg: kg });
+  setState(weightChanged ? { profile, habits: addWeight(state.habits, today, kg) } : { profile });
+  return weightChanged;
+}
+
 // ---------- diario pasti ----------
 const setToday = day => setState({ logs: { ...state.logs, [todayKey()]: day } });
 
@@ -74,6 +87,20 @@ export function removeFood(mealId, entryId) {
 
 /** Rimette una voce già esistente (annulla di una rimozione). */
 export const restoreEntry = (mealId, entry) => setToday(addEntry(getToday(), mealId, entry));
+
+/** Cambia i grammi di una voce di oggi (kcal e macro si scalano in proporzione). Restituisce la voce COM'ERA prima
+ *  (serve all'annulla), o null se la voce non esiste o i grammi non sono validi: in quel caso non cambia nulla. */
+export function updateEntry(mealId, entryId, grams) {
+  const day = getToday();
+  const previous = day[mealId]?.find(entry => entry.id === entryId) ?? null;
+  const next = previous && scaleEntry(previous, grams);
+  if (!next) return null;
+  setToday(replaceEntryIn(day, mealId, next));
+  return previous;
+}
+
+/** Rimette una voce com'era (annulla di updateEntry): lo snapshot ESATTO, senza ricalcoli, quindi nessun arrotondamento perso. */
+export const replaceEntry = (mealId, entry) => setToday(replaceEntryIn(getToday(), mealId, entry));
 
 /** Copia in oggi gli alimenti di ieri per quel pasto. Restituisce le voci create (per poterle annullare). */
 export function repeatYesterday(mealId) {

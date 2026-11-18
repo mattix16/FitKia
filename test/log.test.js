@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyDay, makeEntry, addEntry, removeEntry, sumEntries, dayTotals, mealTotals, defaultMealId } from '../src/log.js';
-import { recentFoods, copyMeal, normalizeLogs } from '../src/log.js';
+import { recentFoods, copyMeal, normalizeLogs, scaleEntry, replaceEntry } from '../src/log.js';
 
 const food = { id: 'banana', name: 'Banana', per100g: { kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 } };
 
@@ -65,4 +65,60 @@ test('normalizeLogs scarta giorni e voci rovinati', () => {
   assert.deepEqual(logs['2026-11-12'].lunch, [good]);
   assert.deepEqual(logs['2026-11-12'].dinner, []);
   assert.deepEqual(normalizeLogs(null), {});
+});
+
+// ---------- Pacchetto A: modifica grammi, recenti per pasto ----------
+
+test('scaleEntry: kcal e macro dello snapshot scalati in proporzione, stesso id, originale intatto', () => {
+  const entry = makeEntry(banana, 100);                              // 89 kcal · P 1,1 · C 23 · G 0,3
+  assert.deepEqual(scaleEntry(entry, 200), { ...entry, grams: 200, kcal: 178, protein: 2.2, carbs: 46, fat: 0.6 });
+  const odd = scaleEntry(entry, 33);                                 // 29,37 kcal -> 29; macro a 1 decimale
+  assert.deepEqual([odd.kcal, odd.protein, odd.carbs, odd.fat], [29, 0.4, 7.6, 0.1]);
+  assert.equal(odd.id, entry.id);
+  assert.equal(odd.foodId, 'banana');
+  assert.equal(entry.grams, 100);                                    // non modifica la voce di partenza
+  assert.equal(entry.kcal, 89);
+});
+
+test('scaleEntry: grammi non validi o voce senza grammi validi -> null', () => {
+  const entry = makeEntry(banana, 100);
+  for (const grams of [0, -5, NaN, Infinity, undefined, '50']) assert.equal(scaleEntry(entry, grams), null, String(grams));
+  assert.equal(scaleEntry({ ...entry, grams: 0 }, 50), null);        // niente divisione per zero
+  assert.equal(scaleEntry({ ...entry, grams: NaN }, 50), null);
+});
+
+test('scaleEntry: scalando avanti e indietro la deriva resta entro 1 kcal (per questo l\'annulla rimette lo snapshot esatto)', () => {
+  const entry = makeEntry(banana, 100);
+  const back = scaleEntry(scaleEntry(entry, 33), 100);
+  assert.ok(Math.abs(back.kcal - entry.kcal) <= 1, `${back.kcal} vs ${entry.kcal}`);
+});
+
+test('replaceEntry: sostituisce nella stessa posizione e non modifica il giorno originale', () => {
+  const a = makeEntry(banana, 100), b = makeEntry(mela, 120), c = makeEntry(banana, 50);
+  const day = [a, b, c].reduce((d, entry) => addEntry(d, 'snack', entry), emptyDay());
+  const next = replaceEntry(day, 'snack', scaleEntry(b, 60));
+  assert.deepEqual(next.snack.map(e => e.id), [a.id, b.id, c.id]);
+  assert.equal(next.snack[1].grams, 60);
+  assert.equal(day.snack[1].grams, 120);
+  assert.equal(next.lunch, day.lunch);                               // gli altri pasti non si toccano
+});
+
+test('replaceEntry: id assente = stesso giorno', () => {
+  const day = emptyDay();
+  assert.equal(replaceEntry(day, 'snack', makeEntry(banana, 100)), day);
+});
+
+test('recentFoods con mealId: prima gli alimenti di quel pasto, con la porzione usata in quel pasto', () => {
+  const logs = {
+    '2026-11-12': addEntry(addEntry(addEntry(emptyDay(), 'breakfast', makeEntry(banana, 100)), 'snack', makeEntry(mela, 120)), 'snack', makeEntry(banana, 999)),
+    '2026-11-11': addEntry(addEntry(addEntry(emptyDay(), 'breakfast', makeEntry(banana, 110)), 'snack', makeEntry(mela, 130)), 'snack', makeEntry(mela, 140)),
+    '2026-11-10': addEntry(emptyDay(), 'snack', makeEntry(mela, 90)),
+  };
+  // senza mealId: invariato (mela 4 volte, banana 3; porzione = la più recente in assoluto)
+  assert.deepEqual(recentFoods(logs, 5, '2026-11-12').map(f => [f.foodId, f.count, f.grams]), [['mela', 4, 120], ['banana', 3, 100]]);
+  // colazione: la banana (2 colazioni) passa avanti alla mela (0), con la porzione della colazione
+  assert.deepEqual(recentFoods(logs, 5, '2026-11-12', 30, 'breakfast').map(f => [f.foodId, f.grams]), [['banana', 100], ['mela', 120]]);
+  // snack: la mela resta prima; la banana, usata una volta come snack, propone i 999 g di quello snack
+  assert.deepEqual(recentFoods(logs, 5, '2026-11-12', 30, 'snack').map(f => [f.foodId, f.grams]), [['mela', 120], ['banana', 999]]);
+  assert.equal(recentFoods(logs, 1, '2026-11-12', 30, 'breakfast').length, 1);
 });

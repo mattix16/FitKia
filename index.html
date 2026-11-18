@@ -474,8 +474,12 @@
         <p id="food-selected" class="font-bold"></p>
         <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Grammi</span>
           <input id="food-grams" type="number" inputmode="decimal" value="100" class="field-input"></label>
+        <!-- Porzioni a pezzi (1 uovo, 1 fetta...): il tocco imposta i grammi. Vuoto = nascosto. -->
+        <div id="food-portions" role="group" aria-label="Porzioni" class="flex flex-wrap gap-2 empty:hidden"></div>
         <p id="food-preview" class="text-sm text-muted"></p>
         <button id="food-add" type="button" class="btn-primary disabled:opacity-40">Aggiungi</button>
+        <!-- Solo mentre si modificano i grammi di una voce già aggiunta (il pulsante sopra diventa "Aggiorna") -->
+        <button id="food-edit-cancel" type="button" class="btn-soft hidden h-11 text-sm">Annulla modifica</button>
       </div>
       <div id="food-undo" role="status" class="flex min-h-6 items-center gap-3 text-sm"></div>
 
@@ -517,6 +521,20 @@
       </div>
     </div>
   </dialog>
+  <!-- Riepilogo dopo l'onboarding: i target appena calcolati (lo apre ui/onboarding.js) -->
+  <dialog id="welcome-dialog" aria-labelledby="welcome-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
+    <div class="flex flex-col gap-4 p-5">
+      <h2 id="welcome-title" class="text-[22px] font-bold tracking-tight">Il tuo piano è pronto</h2>
+      <p id="welcome-summary" class="-mt-2 text-sm text-muted"></p>
+      <div class="rounded-2xl bg-tint px-4 py-3">
+        <p class="text-xs font-medium text-muted">Obiettivo giornaliero</p>
+        <p id="welcome-targets" class="mt-0.5 text-sm font-semibold text-deep"></p>
+      </div>
+      <p class="text-sm text-muted">Sono stime indicative (formula di Mifflin-St Jeor), non consigli medici. Puoi cambiarle quando vuoi in Impostazioni.</p>
+      <button id="welcome-close" type="button" class="h-12 rounded-full bg-action font-semibold text-on-action transition active:scale-[.97]">Inizia</button>
+    </div>
+  </dialog>
+
   <dialog id="import-dialog" aria-labelledby="import-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
     <div class="flex flex-col gap-4 p-5">
       <h2 id="import-title" class="text-[17px] font-semibold tracking-tight">Ripristinare questo backup?</h2>
@@ -531,7 +549,7 @@
   <dialog id="delete-dialog" aria-labelledby="delete-title" class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
     <div class="flex flex-col gap-4 p-5">
       <h2 id="delete-title" class="text-[17px] font-semibold tracking-tight">Eliminare tutti i dati?</h2>
-      <p class="text-sm text-muted">Profilo, diario dei pasti, acqua, peso e integratori verranno cancellati da questo dispositivo. L'operazione non si può annullare: se vuoi una copia, esporta prima i dati.</p>
+      <p class="text-sm text-muted">Profilo, diario dei pasti, acqua, peso, integratori, alimenti personali e pasti preferiti verranno cancellati da questo dispositivo. L'operazione non si può annullare: se vuoi una copia, esporta prima i dati.</p>
       <button id="delete-confirm" type="button" class="h-12 rounded-full bg-danger/15 font-semibold text-danger transition active:scale-[.97]">Sì, elimina tutto</button>
       <button id="delete-cancel" type="button" class="h-12 rounded-full bg-tint font-semibold text-deep">Annulla</button>
     </div>

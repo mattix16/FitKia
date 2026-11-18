@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyHabits, normalizeHabits, addWater, waterOn, waterGoalMl, addWeight, removeWeight, weightHistory,
+import { emptyHabits, normalizeHabits, addWater, waterOn, waterGoalMl, addWeight, removeWeight, weightHistory, weightOnOr,
   addSupplement, removeSupplement, toggleSupplement, isChecked } from '../src/habits.js';
 
 const D1 = '2026-11-10', D2 = '2026-11-11', D3 = '2026-11-12';
@@ -40,6 +40,13 @@ test('storico peso: più recente per primo, con variazione rispetto al precedent
   assert.deepEqual(rows.map(r => [r.date, r.delta]), [[D3, 0.2], [D2, -0.6]]);
   assert.equal(weightHistory(h, 10).at(-1).delta, null);   // il primo di sempre non ha un precedente
   assert.deepEqual(removeWeight(h, D2).weight.map(e => e.date), [D1, D3]);
+});
+
+test('weightOnOr: la pesata di quel giorno, altrimenti il valore di riserva', () => {
+  const h = addWeight(emptyHabits(), D1, 80.4);
+  assert.equal(weightOnOr(h, D1, 99), 80.4);
+  assert.equal(weightOnOr(h, D2, 79.9), 79.9);        // nessuna pesata quel giorno: vale il peso del profilo
+  assert.equal(weightOnOr(emptyHabits(), D1, 70), 70);
 });
 
 test('integratori: aggiungi, spunta, togli (le spunte spariscono con lui)', () => {

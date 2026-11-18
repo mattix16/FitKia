@@ -27,6 +27,8 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   await page.selectOption('#onboarding-form [name=sex]', 'male');
   await page.click('#onboarding-form button[type=submit]');
   await page.waitForSelector('#app-section', { state: 'visible' });
+  ok('onboarding: riepilogo del piano con kcal e macro', await $('#welcome-dialog').evaluate(d => d.open) && /kcal · P \d+ g · C \d+ g · G \d+ g/.test(await text('#welcome-targets')), await text('#welcome-targets'));
+  await $('#welcome-close').click();                       // il dialog è modale: va chiuso prima di toccare la home
   ok('dopo onboarding: dashboard con saluto e obiettivo', (await text('#welcome-header')) === 'Ciao, Mattia' && /^\d/.test(await text('#kcal-goal')), await text('#kcal-goal') + ' kcal');
   ok('pasti vuoti: invitano ad aggiungere', /Aggiungi la colazione/.test(await text('#meal-list')) && /Aggiungi il pranzo/.test(await text('#meal-list')));
   ok('anello: dasharray applicato via CSS', (await page.evaluate(() => getComputedStyle(document.getElementById('ring-progress')).strokeDasharray)).length > 0);
@@ -140,7 +142,7 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   ok('cancellazione: tutto sparito, torna l\'onboarding', (await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('fitkia')).length)) === 0);
   // import: prima un file sbagliato, poi quello vero (si va in Impostazioni dopo aver ricreato un profilo)
   await page.fill('[name=name]', 'X'); await page.fill('#onboarding-form [name=age]', '25'); await page.fill('#onboarding-form [name=weightKg]', '60'); await page.fill('#onboarding-form [name=heightCm]', '165'); await page.selectOption('#onboarding-form [name=sex]', 'female'); await page.click('#onboarding-form button[type=submit]');
-  await page.waitForSelector('#app-section', { state: 'visible' }); await $('[data-nav=settings]').click();
+  await page.waitForSelector('#app-section', { state: 'visible' }); await $('#welcome-close').click(); await $('[data-nav=settings]').click();
   fs.writeFileSync('/tmp/junk.json', '{"app":"altro"}');
   await $('#import-file').setInputFiles('/tmp/junk.json');
   await page.waitForFunction(() => document.getElementById('import-error').textContent.length > 0);

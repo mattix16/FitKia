@@ -1,11 +1,10 @@
 // Pagina Impostazioni. Come foodPanel: mount (eventi, UNA volta) e render (aggiorna la vista, tante volte).
 import { GOAL_OPTIONS, ACTIVITY_OPTIONS, BACKUP } from '../config.js';
-import { calculateTargets, calculateMacroTargets } from '../nutrition.js';
 import { validateGoalSettings, validateProfile, validateBackup } from '../validation.js';
 import { buildBackup, backupFileName, describeBackup } from '../backup.js';
-import { getState, updateProfile, resetAll, restoreAll } from '../store.js';
+import { getState, updateProfile, savePersonalData, resetAll, restoreAll } from '../store.js';
 import { fillOptions, showFieldErrors, flashStatus, escapeHtml as esc } from './forms.js';
-import { formatInt } from './format.js';
+import { describeTargets } from './format.js';
 
 const $ = id => document.getElementById(id);
 const PERSONAL_FIELDS = ['name', 'age', 'weightKg', 'heightCm', 'sex'];
@@ -37,13 +36,6 @@ function showImportErrors(errors) {
   $('import-error').innerHTML = messages.length === 0 ? ''
     : `<p class="font-semibold">Backup non importato: nessun dato è stato modificato.</p>
        <ul class="mt-1 list-disc pl-5">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
-}
-
-/** "1780 kcal · P 144 g · C 160 g · G 59 g" per un profilo (anche ipotetico). */
-function describeTargets(profile) {
-  const kcal = calculateTargets(profile)[profile.goal];
-  const { protein, carbs, fat } = calculateMacroTargets(kcal, profile.weightKg);
-  return `${formatInt(kcal)} kcal · P ${protein} g · C ${carbs} g · G ${fat} g`;
 }
 
 /** Sotto la select: cosa significa il livello scelto (es. "1-3 allenamenti a settimana"). */
@@ -78,8 +70,8 @@ export function mountSettings() {
     const { ok, errors, value } = validateProfile(merged);
     showFieldErrors(personalForm, errors);
     if (!ok) return;
-    updateProfile(value);                                  // i target si ricalcolano perché dipendono dal profilo
-    flashStatus($('personal-status'), 'Salvato ✓');
+    const weightLogged = savePersonalData(value);          // i target si ricalcolano; se il peso è cambiato registra anche la pesata
+    flashStatus($('personal-status'), weightLogged ? 'Salvato ✓ · peso registrato nel diario' : 'Salvato ✓');
   });
 
   // --- import: FileReader -> validateBackup (Result Pattern) -> conferma -> restoreAll SOLO se ok === true

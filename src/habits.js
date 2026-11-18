@@ -41,6 +41,9 @@ export function addWeight(habits, date, kg) {
   return { ...habits, weight };
 }
 
+/** Il peso registrato per `date`, oppure `fallbackKg` se quel giorno non c'è una pesata (es. il peso del profilo). */
+export const weightOnOr = (habits, date, fallbackKg) => habits.weight.find(entry => entry.date === date)?.kg ?? fallbackKg;
+
 export const removeWeight = (habits, date) => ({ ...habits, weight: habits.weight.filter(entry => entry.date !== date) });
 
 /** Ultimi `limit` pesi, il più recente per primo, con la differenza rispetto al peso precedente (null per il primo di sempre). */

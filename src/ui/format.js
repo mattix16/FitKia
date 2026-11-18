@@ -1,4 +1,6 @@
 // Formattazione per la UI (numeri e date in italiano). I formattatori si creano UNA volta: costruirli costa.
+import { calculateTargets, calculateMacroTargets } from '../nutrition.js';
+
 const int = new Intl.NumberFormat('it-IT');
 const one = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const liters = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 });
@@ -17,3 +19,9 @@ export const formatDayLabel = (key, index) => (index === 0 ? 'Oggi' : index === 
 export const formatSigned = n => `${n > 0 ? '+' : n < 0 ? '−' : ''}${one.format(Math.abs(n))}`;
 /** "1 alimento" / "3 alimenti" */
 export const formatFoodCount = n => `${n} ${n === 1 ? 'alimento' : 'alimenti'}`;
+/** "1.780 kcal · P 144 g · C 160 g · G 59 g" per un profilo (anche ipotetico). Lo usano Impostazioni e il riepilogo dell'onboarding. */
+export function describeTargets(profile) {
+  const kcal = calculateTargets(profile)[profile.goal];
+  const { protein, carbs, fat } = calculateMacroTargets(kcal, profile.weightKg);
+  return `${formatInt(kcal)} kcal · P ${protein} g · C ${carbs} g · G ${fat} g`;
+}

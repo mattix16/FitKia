@@ -19,7 +19,7 @@ export function renderMeals(container, day, yesterday = {}) {
       <button type="button" class="eating-button" data-meal-id="${meal.id}">
         ${toneIcon(meal.id)}
         <span class="flex-1 min-w-0"><span class="block text-[15px] font-semibold">${meal.label}</span>
-          <span class="mt-0.5 block truncate text-xs text-muted" data-summary-for="${meal.id}"></span>
+          <span class="mt-0.5 line-clamp-2 text-xs text-muted" data-summary-for="${meal.id}"></span>
           <span class="mt-0.5 block text-xs font-semibold tabular-nums">${fmt.format(mealTotals(day, meal.id).kcal)} <span class="font-medium text-muted">kcal</span></span></span>
         <span aria-hidden="true" class="pill-add">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>Aggiungi</span>
@@ -34,7 +34,7 @@ export function renderMeals(container, day, yesterday = {}) {
   MEALS.forEach(meal => {
     const entries = day[meal.id] ?? [];
     container.querySelector(`[data-summary-for="${meal.id}"]`).textContent = entries.length > 0
-      ? entries.map(entry => entry.name).join(', ')
+      ? entries.map(entry => `${entry.name} (${entry.grams} g)`).join(', ')   // es. "Yogurt greco 0% (200 g), Fiocchi d'avena (50 g)"
       : meal.empty;                                            // es. "Aggiungi il pranzo": invita invece di dire "vuoto"
   });
 }

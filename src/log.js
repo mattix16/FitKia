@@ -30,6 +30,23 @@ export function removeEntry(day, mealId, entryId) {
   return { ...day, [mealId]: day[mealId].filter(entry => entry.id !== entryId) };
 }
 
+/** Sostituisce la voce con lo stesso id, NELLA STESSA POSIZIONE. Se l'id non c'è, restituisce lo stesso giorno. */
+export function replaceEntry(day, mealId, entry) {
+  const entries = day[mealId] ?? [];
+  if (!entries.some(e => e.id === entry.id)) return day;
+  return { ...day, [mealId]: entries.map(e => (e.id === entry.id ? entry : e)) };
+}
+
+/** La stessa voce (stesso id) ai nuovi grammi: kcal e macro dello SNAPSHOT scalati in proporzione (kcal intere, macro con 1 decimale).
+ *  null se i grammi non sono un numero > 0 o se la voce non ha grammi validi (niente divisioni per zero).
+ *  Si scala dallo snapshot, non dal dizionario: la voce resta "fotografia" anche se l'alimento cambia o viene eliminato. */
+export function scaleEntry(entry, grams) {
+  if (!Number.isFinite(grams) || grams <= 0 || !Number.isFinite(entry.grams) || entry.grams <= 0) return null;
+  const ratio = grams / entry.grams;
+  const round1 = x => Math.round(x * 10) / 10;
+  return { ...entry, grams, kcal: Math.round(entry.kcal * ratio), protein: round1(entry.protein * ratio), carbs: round1(entry.carbs * ratio), fat: round1(entry.fat * ratio) };
+}
+
 /** Somma kcal e macro di un elenco di voci. reduce: parte da un totale a zero e lo aggiorna a ogni voce. */
 export function sumEntries(entries) {
   return entries.reduce(
@@ -53,22 +70,33 @@ export function recentDays(logs, count, today = todayKey()) {
 }
 
 /** Gli alimenti più ricorrenti negli ultimi `days` giorni, con la porzione dell'ultima volta.
- *  Parità di conteggio: vince il più recente. Il risultato contiene solo id, nome e grammi (non i valori nutrizionali). */
-export function recentFoods(logs, limit, today = todayKey(), days = 30) {
+ *  Parità di conteggio: vince il più recente. Il risultato contiene solo id, nome e grammi (non i valori nutrizionali).
+ *  Con `mealId` (es. 'breakfast') vengono PRIMA gli alimenti usati in quel pasto (più volte = più in alto), poi gli altri;
+ *  la porzione proposta è l'ultima usata in quel pasto, se c'è. `count` resta il totale su tutti i pasti. */
+export function recentFoods(logs, limit, today = todayKey(), days = 30, mealId = null) {
   const stats = new Map();
   for (let i = 0; i < days; i++) {                       // dal giorno più recente al più vecchio
     const day = logs[shiftDayKey(today, -i)];
     if (!day) continue;
-    for (const entry of Object.values(day).flat()) {
-      const found = stats.get(entry.foodId);
-      if (found) found.count += 1;
-      else stats.set(entry.foodId, { foodId: entry.foodId, name: entry.name, grams: entry.grams, count: 1, order: stats.size });
+    for (const [dayMealId, entries] of Object.entries(day)) {
+      for (const entry of entries) {
+        let found = stats.get(entry.foodId);
+        if (!found) {
+          found = { foodId: entry.foodId, name: entry.name, grams: entry.grams, count: 0, mealCount: 0, mealGrams: null, order: stats.size };
+          stats.set(entry.foodId, found);
+        }
+        found.count += 1;
+        if (dayMealId === mealId) {
+          found.mealCount += 1;
+          found.mealGrams ??= entry.grams;               // il primo che si incontra è il più recente
+        }
+      }
     }
   }
   return [...stats.values()]
-    .sort((a, b) => b.count - a.count || a.order - b.order)
+    .sort((a, b) => b.mealCount - a.mealCount || b.count - a.count || a.order - b.order)
     .slice(0, limit)
-    .map(({ foodId, name, grams, count }) => ({ foodId, name, grams, count }));
+    .map(({ foodId, name, grams, count, mealGrams }) => ({ foodId, name, grams: mealGrams ?? grams, count }));
 }
 
 /** Aggiunge a `day` una COPIA (con id nuovi) degli alimenti di `mealId` presi da `sourceDay` (es. ieri). */

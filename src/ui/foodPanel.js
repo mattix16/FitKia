@@ -1,20 +1,21 @@
-// Finestra "aggiungi alimento": copia da ieri, preferiti, recenti, ricerca, grammi, alimento personale, annulla.
+// Finestra "aggiungi alimento": copia da ieri, preferiti, recenti, ricerca, grammi, porzioni, modifica di una voce, alimento personale, annulla.
 import { searchFoods, findFood } from '../data/foods.js';
 import { nutrientsFor } from '../nutrition.js';
 import { parseNumber, validateCustomFood, validateFavoriteName } from '../validation.js';
-import { recentFoods, todayKey, favoriteKcal } from '../log.js';
+import { recentFoods, todayKey, favoriteKcal, scaleEntry } from '../log.js';
 import { MEALS, LIMITS, MAX_RESULTS, RECENT_FOODS_SHOWN, RECENT_DAYS } from '../config.js';
 import { escapeHtml as esc, showFieldErrors } from './forms.js';
 import { showUndo } from './toast.js';
 import { formatFoodCount } from './format.js';
-import { addFood, removeFood, restoreEntry, repeatYesterday, addCustomFood, deleteCustomFood, getState, getToday, subscribe,
+import { addFood, removeFood, restoreEntry, updateEntry, replaceEntry, repeatYesterday, addCustomFood, deleteCustomFood, getState, getToday, subscribe,
   yesterdayCount, saveFavorite, deleteFavorite, addFavoriteToMeal } from '../store.js';
 
 const $ = id => document.getElementById(id);
 
 let currentMeal = null; // pasto per cui la finestra è aperta
 let results = [];       // ultimi risultati di ricerca
-let selected = null;    // alimento scelto
+let selected = null;    // alimento scelto (nuova aggiunta)
+let editing = null;     // { mealId, entry }: voce già aggiunta di cui si stanno cambiando i grammi (esclusivo con `selected`)
 
 const customFoods = () => getState().customFoods;
 const readGrams = () => {
@@ -45,7 +46,8 @@ const sortedFavorites = () => [...getState().favorites].sort((a, b) => Number(b.
 
 /** "Come ieri", "Preferiti" e "Recenti": visibili solo se la ricerca è vuota e c'è qualcosa da proporre. */
 function renderQuick() {
-  const recents = recentFoods(getState().logs, RECENT_FOODS_SHOWN, todayKey(), RECENT_DAYS)
+  // I recenti di questo pasto vengono per primi (la colazione propone prima ciò che di solito si mangia a colazione).
+  const recents = recentFoods(getState().logs, RECENT_FOODS_SHOWN, todayKey(), RECENT_DAYS, currentMeal)
     .filter(item => findFood(item.foodId, customFoods()));          // un alimento personale eliminato non si propone più
   $('food-recents').innerHTML = recents.map(item => `<li><button type="button" data-recent-id="${esc(item.foodId)}" data-grams="${item.grams}"
       class="chip !min-h-11 !px-4 !text-sm">${esc(item.name)} · ${item.grams} g</button></li>`).join('');
@@ -68,18 +70,72 @@ function renderQuick() {
   $('food-quick').classList.toggle('hidden', $('food-search').value.trim() !== '' || (recents.length === 0 && count === 0 && favorites.length === 0));
 }
 
+// ---------- Picker: nuova aggiunta (selected) o modifica dei grammi di una voce già aggiunta (editing) ----------
+
+/** Chip delle porzioni a pezzi dell'alimento (nessuno = contenitore vuoto = nascosto). Il tocco imposta i grammi. */
+function renderPortions(food) {
+  $('food-portions').innerHTML = (food?.portions ?? []).map(portion => `<button type="button" data-portion-grams="${portion.grams}" aria-pressed="false"
+      class="chip !min-h-11 !px-4 !text-sm">${esc(portion.label)} · ${portion.grams} g</button>`).join('');
+}
+
+/** Evidenzia il chip che corrisponde ai grammi scritti. */
+function markPortions(grams) {
+  $('food-portions').querySelectorAll('[data-portion-grams]').forEach(chip => {
+    const on = Number(chip.dataset.portionGrams) === grams;
+    chip.setAttribute('aria-pressed', String(on));
+    chip.classList.toggle('!bg-action', on);
+    chip.classList.toggle('!text-on-action', on);
+  });
+}
+
+/** Il pulsante principale dice "Aggiorna" in modifica; "Annulla modifica" compare solo allora. */
+function syncPicker() {
+  $('food-add').textContent = editing ? 'Aggiorna' : 'Aggiungi';
+  $('food-edit-cancel').classList.toggle('hidden', !editing);
+}
+
+function showPicker({ title, food, grams }) {
+  $('food-selected').textContent = title;
+  $('food-grams').value = grams;
+  renderPortions(food);
+  syncPicker();
+  $('food-picker').classList.remove('hidden');
+  showPreview();
+  $('food-grams').focus();
+}
+
+function closePicker() {
+  selected = null;
+  editing = null;
+  $('food-picker').classList.add('hidden');
+  syncPicker();
+}
+
 function showPreview() {
   const grams = readGrams();
-  $('food-add').disabled = !(selected && grams);
-  if (!selected || !grams) { $('food-preview').textContent = ''; return; }
-  const n = nutrientsFor(selected, grams);               // calcolo dinamico mentre scrivi
-  $('food-preview').textContent = `${n.kcal} kcal · P ${n.protein} g · C ${n.carbs} g · G ${n.fat} g`;
+  const target = editing ? editing.entry : selected;
+  // In modifica si scala lo snapshot della voce (come farà updateEntry); in aggiunta si calcola dal dizionario.
+  const n = target && grams ? (editing ? scaleEntry(editing.entry, grams) : nutrientsFor(selected, grams)) : null;
+  $('food-add').disabled = !n;
+  markPortions(grams);
+  $('food-preview').textContent = n ? `${n.kcal} kcal · P ${n.protein} g · C ${n.carbs} g · G ${n.fat} g` : '';   // calcolo dinamico mentre scrivi
+}
+
+/** Tocco su una voce già aggiunta: i suoi grammi si modificano nel picker. */
+function startEdit(entryId) {
+  const entry = (getToday()[currentMeal] ?? []).find(e => e.id === entryId);
+  if (!entry) return;
+  selected = null;
+  editing = { mealId: currentMeal, entry };
+  showPicker({ title: entry.name, food: findFood(entry.foodId, customFoods()), grams: entry.grams });
+  renderEntries();                                       // evidenzia la riga in modifica
 }
 
 function renderEntries() {
   const entries = getToday()[currentMeal] ?? [];
-  $('food-entries').innerHTML = entries.map(e => `<li class="flex items-center gap-3 rounded-xl bg-tint/60 px-4 py-2.5">
-      <span class="flex-1 min-w-0 truncate text-sm">${esc(e.name)} · ${e.grams} g</span>
+  $('food-entries').innerHTML = entries.map(e => `<li class="flex items-center gap-3 rounded-xl bg-tint/60 px-4 py-2.5${editing?.entry.id === e.id ? ' ring-2 ring-brand/40' : ''}">
+      <button type="button" data-edit-entry-id="${esc(e.id)}" aria-label="Modifica i grammi di ${esc(e.name)}, ora ${e.grams} g"
+        class="min-h-11 min-w-0 flex-1 truncate text-left text-sm">${esc(e.name)} · <span class="font-semibold text-deep">${e.grams} g</span></button>
       <span class="text-sm font-bold">${e.kcal} kcal</span>
       <button type="button" data-entry-id="${esc(e.id)}" aria-label="Rimuovi ${esc(e.name)}" class="h-11 w-11 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`).join('')
     || '<li class="text-sm text-muted">Nessun alimento aggiunto</li>';
@@ -106,17 +162,23 @@ export function mountFoodPanel() {
     const del = event.target.closest('[data-delete-food-id]');
     if (del) {                                            // le voci già nel diario restano: sono "fotografie" dei valori
       deleteCustomFood(del.dataset.deleteFoodId);
-      if (selected?.id === del.dataset.deleteFoodId) { selected = null; $('food-picker').classList.add('hidden'); }
+      if (selected?.id === del.dataset.deleteFoodId) closePicker();
       return showResults();
     }
     const button = event.target.closest('[data-food-id]');
     if (!button) return;
     selected = results.find(food => food.id === button.dataset.foodId);
-    $('food-selected').textContent = selected.name;
-    $('food-grams').value = 100;                          // porzione di default
-    $('food-picker').classList.remove('hidden');
+    editing = null;                                       // scegliere un alimento chiude una modifica in corso
+    showPicker({ title: selected.name, food: selected, grams: 100 });   // porzione di default: 100 g
+    renderEntries();
+  });
+
+  // Porzioni a pezzi: il tocco IMPOSTA i grammi (per 2 uova si scrive 120).
+  $('food-portions').addEventListener('click', event => {
+    const chip = event.target.closest('[data-portion-grams]');
+    if (!chip) return;
+    $('food-grams').value = chip.dataset.portionGrams;
     showPreview();
-    $('food-grams').focus();
   });
 
   $('food-recents').addEventListener('click', event => {
@@ -133,12 +195,27 @@ export function mountFoodPanel() {
 
   $('food-add').addEventListener('click', () => {
     const grams = readGrams();
-    if (!selected || !grams) return;
+    if (!grams) return;
+    if (editing) {                                        // "Aggiorna": cambia i grammi della voce, con "Annulla"
+      const { mealId, entry } = editing;
+      closePicker();
+      if (grams !== entry.grams) {
+        const previous = updateEntry(mealId, entry.id, grams);
+        if (previous) showUndo($('food-undo'), `${previous.name}: ${previous.grams} g → ${grams} g`, () => replaceEntry(mealId, previous));
+      }
+      renderEntries();
+      return;
+    }
+    if (!selected) return;
     addWithUndo(selected, grams);
-    selected = null;
-    $('food-picker').classList.add('hidden');
+    closePicker();
     $('food-search').value = '';
     showResults();
+  });
+
+  $('food-edit-cancel').addEventListener('click', () => {
+    closePicker();
+    renderEntries();
   });
 
   // Pasti preferiti: un tocco = tutti gli alimenti (snapshot salvati) nel pasto aperto, con "Annulla".
@@ -168,6 +245,8 @@ export function mountFoodPanel() {
   });
 
   $('food-entries').addEventListener('click', event => {
+    const edit = event.target.closest('[data-edit-entry-id]');
+    if (edit) return startEdit(edit.dataset.editEntryId);
     const button = event.target.closest('[data-entry-id]');
     if (!button) return;
     const meal = currentMeal;
@@ -191,15 +270,20 @@ export function mountFoodPanel() {
   });
 
   // Se lo stato cambia mentre la finestra è aperta (aggiungi, annulla...), aggiorna le liste.
-  subscribe(() => { if ($('food-dialog').open) { renderEntries(); renderQuick(); } });
+  subscribe(() => {
+    if (!$('food-dialog').open) return;
+    // La voce che si stava modificando non c'è più (rimossa, o aggiunta annullata): si chiude il picker.
+    if (editing && !(getToday()[editing.mealId] ?? []).some(entry => entry.id === editing.entry.id)) closePicker();
+    renderEntries();
+    renderQuick();
+  });
 }
 
 export function openFoodPanel(mealId) {
   currentMeal = mealId;
-  selected = null;
+  closePicker();
   $('food-dialog-title').textContent = MEALS.find(meal => meal.id === mealId).label;
   $('food-search').value = '';
-  $('food-picker').classList.add('hidden');
   $('food-undo').textContent = '';
   $('favorite-error').textContent = '';
   $('favorite-form').reset();

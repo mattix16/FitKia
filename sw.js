@@ -1,5 +1,5 @@
 // Service Worker di Fitkia. Cambia VERSION a ogni release: è ciò che fa arrivare gli aggiornamenti agli utenti.
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = `fitkia-${VERSION}`;
 
 // App shell: tutto ciò che serve per aprire l'app senza rete.
