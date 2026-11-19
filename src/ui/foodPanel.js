@@ -83,7 +83,7 @@ function renderQuick() {
 /** Chip delle porzioni a pezzi dell'alimento (nessuno = contenitore vuoto = nascosto). Il tocco imposta i grammi. */
 function renderPortions(food) {
   $('food-portions').innerHTML = (food?.portions ?? []).map(portion => `<button type="button" data-portion-grams="${portion.grams}" aria-pressed="false"
-      class="chip !min-h-11 !px-4 !text-sm">${esc(portion.label)} · ${portion.grams} g</button>`).join('');
+      class="chip shrink-0 whitespace-nowrap !min-h-11 !px-4 !text-sm">${esc(portion.label)} · ${portion.grams} g</button>`).join('');
 }
 
 /** Evidenzia il chip che corrisponde ai grammi scritti. */
@@ -305,5 +305,6 @@ export function openFoodPanel(mealId) {
   $('favorite-form').reset();
   showResults();
   renderEntries();
+  $('food-scroll').scrollTop = 0;                        // il centro riparte dall'alto (la finestra si riusa)
   $('food-dialog').showModal();                          // finestra modale nativa
 }

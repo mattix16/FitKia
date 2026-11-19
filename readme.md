@@ -99,6 +99,7 @@ fitkia/
 │   ├── log.js           # logica pura: diario dei pasti
 │   ├── backup.js        # logica pura: export/import JSON
 │   ├── meta.js          # logica pura: promemoria del dispositivo (ultimo backup, suggerimenti, periodo del grafico)
+│   ├── keyboard.js      # logica pura: riconosce la tastiera del telefono aperta (la barra in basso si ritira)
 │   ├── styles/input.css # sorgente degli stili: Tailwind lo compila in app.css
 │   ├── validation.js    # logica pura: form grezzo -> dati tipizzati
 │   ├── storage.js       # unico file che tocca localStorage
@@ -206,6 +207,8 @@ In Android Studio attendi la "Gradle sync" (la prima volta scarica diversi GB e 
   - **Tasto indietro**: chiude la finestra aperta; poi torna a oggi o alla Home; dalla Home di oggi esce dall'app (logica pura in `router.js`, `backAction`).
 - **Dati**: la WebView ha la *sua* `localStorage`, separata da quella del sito o della PWA. Per portare i dati dal browser all'app: *Impostazioni → Scarica backup* nel browser, poi *Ripristina da un backup* nell'app.
 - Barre di sistema e tastiera: a tutto schermo con il plugin `SystemBars` di Capacitor 8 (configurato in `capacitor.config.json`); sfondo e schermata di avvio seguono il tema chiaro/scuro (`android/app/src/main/res/values*/colors.xml`, gli stessi colori di `--canvas` in `input.css`).
+  - Il tema di avvio (`AppTheme.NoActionBarLaunch`) deve avere `windowActionBar=false` e `windowNoTitle=true`: da Android 12 `Theme.SplashScreen` non li toglie più e, poiché `MainActivity` crea la finestra a tutto schermo prima del cambio di tema, sopra la pagina comparirebbe la barra "Fitkia" (e con la tastiera la pagina si restringerebbe due volte). Un test lo protegge.
+  - Con la tastiera aperta la barra in basso si ritira (`ui/keyboard.js` imposta `data-keyboard` su `<html>`, il CSS la nasconde): altrimenti resterebbe sopra la tastiera a coprire i campi.
 
 ### Scelte da conoscere
 
@@ -221,7 +224,7 @@ In Android Studio attendi la "Gradle sync" (la prima volta scarica diversi GB e 
 
 ### Icone
 
-Le icone (PWA e Android) si generano da un solo disegno: `scripts/make-icons.mjs`. Per cambiare colori o forma si modifica quel file, poi `npm run icons` e `npm run android:sync`.
+Le icone (PWA e Android) si generano da un solo disegno in vetro: `scripts/make-icons.mjs`. Una lastra di vetro smerigliato con l'anello delle calorie e una goccia, su una sfumatura con i colori `accent`, `brand` e `water` dell'app. Lo stesso SVG produce tre livelli: sfondo, primo piano (l'icona adattiva di Android 8+ li compone da sé, con la maschera del telefono) e icona completa (PWA e Android vecchi). Per cambiare colori o forma si modifica quel file, poi `npm run icons` e `npm run android:sync`. Il primo piano deve restare nella zona sicura (cerchio di 72 dp su 108) e senza ombre fuori dalla lastra: un test lo controlla.
 
 ## Privacy
 

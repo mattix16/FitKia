@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, parse } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { COLORS } from '../scripts/make-icons.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ANDROID = join(ROOT, 'android');
@@ -46,6 +45,12 @@ test('MainActivity attiva lo schermo intero PRIMA di super.onCreate (come chiede
   const edgeToEdge = source.indexOf('EdgeToEdge.enable(this);');
   assert.ok(edgeToEdge > 0 && edgeToEdge < source.indexOf('super.onCreate('));
   assert.ok(source.includes('import androidx.activity.EdgeToEdge;'));
+});
+
+test('il tema di avvio non ha la barra del titolo: da Android 12 Theme.SplashScreen la riattiva e, a tutto schermo, copre la pagina e dimezza lo spazio sopra la tastiera', { skip }, () => {
+  const launch = withoutComments(read(RES, 'values', 'styles.xml')).match(/<style name="AppTheme\.NoActionBarLaunch"[\s\S]*?<\/style>/)?.[0] ?? '';
+  assert.match(launch, /<item name="android:windowActionBar">false<\/item>/);
+  assert.match(launch, /<item name="android:windowNoTitle">true<\/item>/);
 });
 
 test('i commenti dei file XML sono validi: due trattini consecutivi dentro un commento fanno fallire la build di Gradle', { skip }, () => {
@@ -93,9 +98,16 @@ test('lo sfondo dell\'app (avvio e dietro la pagina) è quello del tema dell\'ap
   assert.equal(styles.includes('@drawable/splash'), false, 'lo splash con il logo di Capacitor non deve tornare');
 });
 
-test('le icone Android sono quelle di scripts/make-icons.mjs (stesso colore di sfondo)', { skip }, () => {
-  assert.ok(read(RES, 'values', 'ic_launcher_background.xml').includes(`>${COLORS.background}</color>`), 'lancia "npm run icons"');
+test('le icone Android sono quelle di scripts/make-icons.mjs: quattro PNG per densità, e l\'icona adattiva usa lo sfondo a immagine (la sfumatura)', { skip }, () => {
   for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
-    for (const file of ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png']) assert.ok(existsSync(join(RES, `mipmap-${density}`, file)), `${density}/${file}`);
+    for (const file of ['ic_launcher.png', 'ic_launcher_round.png', 'ic_launcher_foreground.png', 'ic_launcher_background.png']) {
+      assert.ok(existsSync(join(RES, `mipmap-${density}`, file)), `${density}/${file}: lancia "npm run icons"`);
+    }
   }
+  for (const file of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
+    const adaptive = withoutComments(read(RES, 'mipmap-anydpi-v26', file));
+    assert.ok(adaptive.includes('<background android:drawable="@mipmap/ic_launcher_background"/>'), `${file}: lo sfondo deve essere il PNG`);
+    assert.equal(adaptive.includes('@color/ic_launcher_background'), false, `${file}: il colore unico dello sfondo non c'è più`);
+  }
+  assert.equal(existsSync(join(RES, 'values', 'ic_launcher_background.xml')), false, 'il colore unico dello sfondo non serve più: toglilo');
 });

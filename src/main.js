@@ -10,6 +10,7 @@ import { viewFromHash, backAction } from './router.js';
 import { mountMeals } from './ui/meals.js';
 import { mountFoodPanel, openFoodPanel } from './ui/foodPanel.js';
 import { mountNotices, renderNotices } from './ui/notices.js';
+import { mountKeyboard } from './ui/keyboard.js';
 import { requestPersistence } from './storage.js';
 import { onHardwareBack } from './native.js';
 
@@ -66,6 +67,7 @@ function init() {
   mountSettings();
   mountDiary();
   mountNotices();
+  mountKeyboard();                                       // con la tastiera aperta la barra in basso si ritira
   // Oggi il "+" propone il pasto dell'ora; su un giorno passato l'ora non c'entra: il primo pasto ancora vuoto di quel giorno.
   $('add-food-button').addEventListener('click', () => openFoodPanel(isViewingToday() ? defaultMealId() : firstEmptyMealId(getDayLog())));
   // La tab Home vuol dire "oggi": toccarla riporta sempre al giorno corrente (un giorno passato si apre da Progressi).

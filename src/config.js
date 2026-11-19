@@ -7,8 +7,13 @@ export const STORAGE_KEYS = { profile: 'fitkia:v1:profile', logs: 'fitkia:v1:log
 // `meta` = promemoria del dispositivo (ultimo backup, suggerimenti già chiusi): non fa parte del backup (vedi meta.js).
 
 export const SEX_OFFSET = { male: 5, female: -161 };                       // Mifflin-St Jeor
+// Come GOAL_OPTIONS: gli id si salvano e sono le chiavi di SEX_OFFSET (un test lo controlla); l'etichetta serve solo alla UI.
+export const SEX_OPTIONS = [
+  { id: 'male',   label: 'Maschio' },
+  { id: 'female', label: 'Femmina' },
+];
 export const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 };
-// Gli id si salvano e non cambiano mai; label e hint servono solo alla UI (le <select> si generano da qui).
+// Gli id si salvano e non cambiano mai; label e hint servono solo alla UI (le schede di scelta si generano da qui, vedi choiceMarkup in ui/forms.js).
 export const GOAL_OPTIONS = [
   { id: 'lose',     label: 'Perdere peso' },
   { id: 'maintain', label: 'Mantenere il peso' },
@@ -72,6 +77,10 @@ export const RECENT_DAYS = 30;         // quanti giorni indietro cercare i cibi 
 export const WATER = { stepMl: 250, maxMl: 10000, minGoalMl: 1500, maxGoalMl: 4000, mlPerKg: 35 };
 
 export const MAX_RESULTS = 80; // risultati mostrati nella ricerca alimenti
+
+// Tastiera del telefono (keyboard.js): di quanto deve ridursi l'altezza visibile, con un campo di testo attivo, perché la si consideri aperta.
+// Più di una barra degli indirizzi che si ritira (~60 px), meno di qualunque tastiera (200 px e oltre).
+export const KEYBOARD_MIN_SHRINK_PX = 120;
 
 export const RING_RADIUS = 64;
 export const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;               // ~402.1

@@ -19,6 +19,10 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <!-- Niente barra del titolo: da Android 12 Theme.SplashScreen non la toglie piu, e MainActivity crea la finestra (schermo intero)
+             PRIMA che Capacitor passi ad AppTheme.NoActionBar. Senza queste due righe sopra la pagina compare la barra "Fitkia". -->
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
         <!-- Android 12+: la schermata di avvio è l'icona dell'app su questo colore -->
         <item name="windowSplashScreenBackground">@color/app_background</item>
         <!-- Android 11 e precedenti: tinta unita, senza immagine -->

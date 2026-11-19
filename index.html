@@ -61,27 +61,24 @@
         <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-danger"></p>
       </label>
 
-      <label class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium">Sesso</span>
-        <select name="sex" class="field-input">
-          <option value="" selected disabled>Seleziona</option>
-          <option value="male">Maschio</option>
-          <option value="female">Femmina</option>
-        </select>       
+      <!-- Sesso, obiettivo e attività sono schede (radio veri) che disegna ui/forms.js dentro i <div> vuoti: niente menu a tendina di sistema (su Android è la lista grigia) -->
+      <fieldset class="flex min-w-0 flex-col gap-1.5">
+        <legend class="mb-1.5 text-sm font-medium">Sesso</legend>
+        <div id="onboarding-sex"></div>
         <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-danger"></p>
-      </label>
+      </fieldset>
 
-      <label class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium">Obiettivo</span>
-        <select name="goal" class="field-input"></select>
+      <fieldset class="flex min-w-0 flex-col gap-1.5">
+        <legend class="mb-1.5 text-sm font-medium">Obiettivo</legend>
+        <div id="onboarding-goal"></div>
         <p data-error-for="goal" role="alert" class="min-h-5 text-sm text-danger"></p>
-      </label>
+      </fieldset>
 
-      <label class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium">Livello di attività</span>
-        <select name="activity" class="field-input"></select>
+      <fieldset class="flex min-w-0 flex-col gap-1.5">
+        <legend class="mb-1.5 text-sm font-medium">Livello di attività</legend>
+        <div id="onboarding-activity"></div>
         <p data-error-for="activity" role="alert" class="min-h-5 text-sm text-danger"></p>
-      </label>
+      </fieldset>
 
       <button type="submit" class="btn-primary mt-2">Salva e inizia</button>
     </form>
@@ -242,26 +239,25 @@
         <section id="goal-card" aria-labelledby="goal-title" class="reveal card" style="--i:1">
           <h2 id="goal-title" class="text-[17px] font-semibold tracking-tight">Obiettivo e attività</h2>
           <form id="goal-form" novalidate class="mt-3 flex flex-col gap-3">
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium">Obiettivo</span>
-              <select name="goal" class="field-input"></select>
-            </label>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-medium">Livello di attività</span>
-              <select name="activity" class="field-input" aria-describedby="activity-hint"></select>
-              <span id="activity-hint" class="px-1 text-xs text-muted"></span>
-            </label>
+            <fieldset class="flex min-w-0 flex-col gap-1.5">
+              <legend class="mb-1.5 text-sm font-medium">Obiettivo</legend>
+              <div id="settings-goal"></div>
+            </fieldset>
+            <fieldset class="flex min-w-0 flex-col gap-1.5">
+              <legend class="mb-1.5 text-sm font-medium">Livello di attività</legend>
+              <div id="settings-activity"></div>
+            </fieldset>
             <label class="flex flex-col gap-1.5">
               <span class="text-sm font-medium">Peso obiettivo (kg) <span class="font-normal text-muted">· facoltativo</span></span>
               <input name="targetWeightKg" type="number" step="0.1" inputmode="decimal" placeholder="Es. 72" class="field-input">
             </label>
             <!-- Il ritmo (kg a settimana) c'è solo se si dimagrisce o si ingrassa: lo nasconde ui/settings.js -->
             <div id="rate-field">
-              <label class="flex flex-col gap-1.5">
-                <span class="text-sm font-medium">Ritmo</span>
-                <select name="weeklyRateKg" class="field-input" aria-describedby="rate-hint"></select>
+              <fieldset class="flex min-w-0 flex-col gap-1.5" aria-describedby="rate-hint">
+                <legend class="mb-1.5 text-sm font-medium">Ritmo</legend>
+                <div id="settings-rate"></div>
                 <span id="rate-hint" class="px-1 text-xs text-muted"></span>
-              </label>
+              </fieldset>
             </div>
             <div class="rounded-2xl bg-tint px-4 py-3">
               <p class="text-xs font-medium text-muted">Obiettivo giornaliero attuale</p>
@@ -289,9 +285,9 @@
             <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Altezza (cm)</span>
               <input name="heightCm" type="number" inputmode="numeric" class="field-input">
               <p data-error-for="heightCm" role="alert" class="min-h-5 text-sm text-danger"></p></label>
-            <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Sesso</span>
-              <select name="sex" class="field-input"><option value="male">Maschio</option><option value="female">Femmina</option></select>
-              <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-danger"></p></label>
+            <fieldset class="flex min-w-0 flex-col gap-1.5"><legend class="mb-1.5 text-sm font-medium">Sesso</legend>
+              <div id="settings-sex"></div>
+              <p data-error-for="sex" role="alert" class="min-h-5 text-sm text-danger"></p></fieldset>
             <p id="personal-status" role="status" class="min-h-5 text-sm text-deep"></p>
             <button type="submit" class="btn-primary">Salva e ricalcola</button>
           </form>
@@ -324,7 +320,7 @@
     <!-- Tab bar "Liquid Glass" (iOS 26): capsula di vetro flottante con una lente che scivola sotto la voce attiva,
          e il pulsante Aggiungi come bolla di vetro separata. pointer-events-none sul contenitore: i tocchi tra le due
          bolle arrivano alla pagina sotto. -->
-    <nav aria-label="Navigazione principale" class="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <nav id="main-nav" aria-label="Navigazione principale" class="pointer-events-none fixed inset-x-0 bottom-0 z-10 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div class="mx-auto flex max-w-md items-center gap-2.5">
       <div id="nav-tabs" class="liquid-glass pointer-events-auto grid flex-1 grid-cols-3 rounded-full p-[3px]">
         <span id="nav-lens" class="nav-lens" aria-hidden="true"></span>
@@ -338,15 +334,19 @@
     </nav>
   </section>
 
-  <!-- FINESTRA "aggiungi alimento": <dialog> è nativo (showModal/close, tasto Esc e focus gestiti dal browser) -->
-  <dialog id="food-dialog" class="sheet mx-auto mb-0 mt-auto w-full max-w-md overscroll-contain rounded-b-none rounded-t-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm">
-    <div class="flex flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+  <!-- FINESTRA "aggiungi alimento": <dialog> è nativo (showModal/close, tasto Esc e focus gestiti dal browser).
+       Tre fasce: intestazione fissa (titolo, chiudi, ricerca), centro che scorre, piede fisso (alimento scelto, grammi, "Aggiungi") che resta
+       sopra la tastiera. Sulla <dialog> mai flex da solo (la terrebbe sempre aperta): solo open:flex. -->
+  <dialog id="food-dialog" class="sheet mx-auto mb-0 mt-auto w-full max-w-md overflow-y-auto overscroll-contain rounded-b-none rounded-t-3xl bg-surface p-0 text-ink hairline shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm open:flex open:flex-col">
+    <div class="flex shrink-0 flex-col gap-3 px-5 pb-3 pt-5">
       <div class="flex items-center justify-between">
         <h2 id="food-dialog-title" class="text-[17px] font-semibold tracking-tight"></h2>
         <button id="food-close" type="button" aria-label="Chiudi" class="flex h-9 w-9 items-center justify-center rounded-full bg-tint text-muted transition active:scale-90"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button>
       </div>
       <input id="food-search" type="search" placeholder="Cerca un alimento..." autocomplete="off" aria-label="Cerca un alimento" class="field-input">
+    </div>
 
+    <div id="food-scroll" class="flex min-h-[6rem] flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-4">
       <div id="food-quick" class="hidden flex flex-col gap-3">
         <button id="food-repeat" type="button" class="btn-soft hidden h-11 text-sm"></button>
         <div id="food-favorites-block" class="flex flex-col gap-2">
@@ -359,19 +359,7 @@
         </div>
       </div>
 
-      <ul id="food-results" class="flex max-h-48 flex-col gap-2 overflow-y-auto overscroll-contain"></ul>
-      <div id="food-picker" class="hidden flex flex-col gap-3">
-        <p id="food-selected" class="font-bold"></p>
-        <label class="flex flex-col gap-1.5"><span class="text-sm font-medium">Grammi</span>
-          <input id="food-grams" type="number" inputmode="decimal" value="100" class="field-input"></label>
-        <!-- Porzioni a pezzi (1 uovo, 1 fetta...): il tocco imposta i grammi. Vuoto = nascosto. -->
-        <div id="food-portions" role="group" aria-label="Porzioni" class="flex flex-wrap gap-2 empty:hidden"></div>
-        <p id="food-preview" class="text-sm text-muted"></p>
-        <button id="food-add" type="button" class="btn-primary disabled:opacity-40">Aggiungi</button>
-        <!-- Solo mentre si modificano i grammi di una voce già aggiunta (il pulsante sopra diventa "Aggiorna") -->
-        <button id="food-edit-cancel" type="button" class="btn-soft hidden h-11 text-sm">Annulla modifica</button>
-      </div>
-      <div id="food-undo" role="status" class="flex min-h-6 items-center gap-3 text-sm"></div>
+      <ul id="food-results" class="flex flex-col gap-2"></ul>
 
       <details id="custom-food-details" class="rounded-2xl bg-canvas px-4 py-3">
         <summary class="cursor-pointer text-sm font-semibold text-deep">Aggiungi un alimento tuo</summary>
@@ -409,6 +397,26 @@
           <p id="favorite-error" data-error-for="name" role="alert" class="text-sm text-danger empty:hidden"></p>
         </form>
       </div>
+    </div>
+
+    <!-- Piede fisso: conferma dell'ultima azione (con "Annulla") e alimento scelto con grammi e "Aggiungi", sempre sopra la tastiera -->
+    <div id="food-undo" role="status" class="flex shrink-0 items-center gap-3 px-5 pb-2 text-sm empty:hidden"></div>
+    <div id="food-picker" class="hidden flex flex-col gap-2 shrink-0 border-t border-line/10 bg-surface px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div class="min-w-0">
+        <p id="food-selected" class="truncate font-bold"></p>
+        <p id="food-preview" class="text-xs text-muted"></p>
+      </div>
+      <!-- Porzioni a pezzi (1 uovo, 1 fetta...): il tocco imposta i grammi. Vuoto = nascosto. -->
+      <div id="food-portions" role="group" aria-label="Porzioni" class="flex gap-2 overflow-x-auto empty:hidden"></div>
+      <div class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <input id="food-grams" type="number" inputmode="decimal" value="100" aria-label="Grammi" class="field-input pr-9">
+          <span aria-hidden="true" class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-muted">g</span>
+        </div>
+        <button id="food-add" type="button" class="btn-primary !w-auto px-7 disabled:opacity-40">Aggiungi</button>
+      </div>
+      <!-- Solo mentre si modificano i grammi di una voce già aggiunta (il pulsante sopra diventa "Aggiorna") -->
+      <button id="food-edit-cancel" type="button" class="btn-soft hidden h-11 text-sm">Annulla modifica</button>
     </div>
   </dialog>
   <!-- Riepilogo dopo l'onboarding: i target appena calcolati (lo apre ui/onboarding.js) -->

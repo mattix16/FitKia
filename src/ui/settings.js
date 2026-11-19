@@ -1,10 +1,10 @@
 // Pagina Impostazioni. Come foodPanel: mount (eventi, UNA volta) e render (aggiorna la vista, tante volte).
-import { GOAL_OPTIONS, ACTIVITY_OPTIONS, BACKUP, RATE_OPTIONS, RATES, DEFAULT_RATE } from '../config.js';
+import { GOAL_OPTIONS, ACTIVITY_OPTIONS, SEX_OPTIONS, BACKUP, RATE_OPTIONS, DEFAULT_RATE } from '../config.js';
 import { dailyEnergyDelta, effectiveWeeklyRateKg } from '../nutrition.js';
 import { validateGoalSettings, validateProfile, validateBackup } from '../validation.js';
 import { buildBackup, backupFileName, describeBackup } from '../backup.js';
 import { getState, updateProfile, savePersonalData, resetAll, restoreAll, markBackupDone } from '../store.js';
-import { fillOptions, showFieldErrors, flashStatus, escapeHtml as esc } from './forms.js';
+import { fillChoices, setChoice, showFieldErrors, flashStatus, escapeHtml as esc } from './forms.js';
 import { describeTargets, formatInt, formatRate } from './format.js';
 import { isNativeApp, shareTextFile } from '../native.js';
 
@@ -62,32 +62,25 @@ function showImportErrors(errors) {
        <ul class="mt-1 list-disc pl-5">${messages.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
 }
 
-/** Sotto la select: cosa significa il livello scelto (es. "1-3 allenamenti a settimana"). */
-function showActivityHint() {
-  const chosen = ACTIVITY_OPTIONS.find(o => o.id === $('goal-form').elements.activity.value);
-  $('activity-hint').textContent = chosen?.hint ?? '';
-}
-
-/** Il ritmo si sceglie solo se si dimagrisce o si ingrassa; sotto la select dice quante kcal al giorno sono (es. "Circa −550 kcal al giorno"). */
+/** Il ritmo si sceglie solo se si dimagrisce o si ingrassa; sotto le schede dice quanto è (kg a settimana) e quante kcal al giorno
+ *  (es. "0,5 kg a settimana: circa −550 kcal al giorno rispetto al tuo fabbisogno."). */
 function showRateField() {
   const form = $('goal-form');
   const goal = form.elements.goal.value;
   const rate = Number(form.elements.weeklyRateKg.value);
+  const chosen = RATE_OPTIONS.find(option => option.id === rate);
   $('rate-field').classList.toggle('hidden', goal === 'maintain');
-  $('rate-hint').textContent = goal !== 'maintain' && RATES.includes(rate)
-    ? `Circa ${goal === 'lose' ? '−' : '+'}${formatInt(dailyEnergyDelta(rate))} kcal al giorno rispetto al tuo fabbisogno.` : '';
+  $('rate-hint').textContent = goal !== 'maintain' && chosen
+    ? `${chosen.hint}: circa ${goal === 'lose' ? '−' : '+'}${formatInt(dailyEnergyDelta(rate))} kcal al giorno rispetto al tuo fabbisogno.` : '';
 }
 
 export function mountSettings() {
-  // --- obiettivo, attività, peso obiettivo e ritmo
+  // --- obiettivo, attività, peso obiettivo e ritmo: schede (radio veri) disegnate qui una volta sola; renderSettings sceglie quella salvata
   const goalForm = $('goal-form');
-  goalForm.elements.activity.addEventListener('change', showActivityHint);
-  goalForm.elements.goal.addEventListener('change', () => {   // cambiando obiettivo, il ritmo torna a quello proposto per il nuovo obiettivo
-    const proposed = DEFAULT_RATE[goalForm.elements.goal.value];
-    if (proposed) goalForm.elements.weeklyRateKg.value = String(proposed);
-    showRateField();
-  });
-  goalForm.elements.weeklyRateKg.addEventListener('change', showRateField);
+  fillChoices($('settings-goal'), 'goal', GOAL_OPTIONS, undefined);
+  fillChoices($('settings-activity'), 'activity', ACTIVITY_OPTIONS, undefined);
+  fillChoices($('settings-rate'), 'weeklyRateKg', RATE_OPTIONS, undefined, 'segmented');
+  fillChoices($('settings-sex'), 'sex', SEX_OPTIONS, undefined, 'segmented');
   goalForm.addEventListener('submit', event => {
     event.preventDefault();
     // Con il peso attuale si controlla che l'obiettivo stia dalla parte giusta (sotto per dimagrire, sopra per ingrassare).
@@ -97,8 +90,14 @@ export function mountSettings() {
     updateProfile(value);                                  // lo store salva e notifica: la dashboard si ricalcola da sola
     flashStatus($('goal-status'), 'Salvato ✓');
   });
-  // Anteprima: cosa risulterebbe con le scelte attuali, SENZA salvare.
-  goalForm.addEventListener('change', () => {
+  // Un solo gestore sul form: il "change" di un radio sale fino a lì (un gruppo di radio non si ascolta radio per radio).
+  goalForm.addEventListener('change', event => {
+    if (event.target.name === 'goal') {                    // cambiando obiettivo, il ritmo torna a quello proposto per il nuovo obiettivo
+      const proposed = DEFAULT_RATE[goalForm.elements.goal.value];
+      if (proposed) setChoice(goalForm, 'weeklyRateKg', proposed);
+    }
+    if (event.target.name === 'goal' || event.target.name === 'weeklyRateKg') showRateField();
+    // Anteprima: cosa risulterebbe con le scelte attuali, SENZA salvare.
     const { ok, value } = validateGoalSettings(Object.fromEntries(new FormData(goalForm)));
     if (!ok) { $('goal-preview').textContent = ''; return; }
     const profile = { ...getState().profile, ...value };
@@ -171,11 +170,10 @@ export function renderSettings(state) {
   $('last-backup').textContent = state.meta.lastBackupAt
     ? `Ultimo backup: ${lastBackupFmt.format(new Date(state.meta.lastBackupAt))}`
     : 'Non hai ancora scaricato un backup.';
-  fillOptions($('goal-form').elements.goal, GOAL_OPTIONS, profile.goal);
-  fillOptions($('goal-form').elements.activity, ACTIVITY_OPTIONS.map(({ id, label }) => ({ id, label })), profile.activity); // il dettaglio sta sotto, non nella voce (si tagliava)
-  fillOptions($('goal-form').elements.weeklyRateKg, RATE_OPTIONS, profile.weeklyRateKg);
+  setChoice($('goal-form'), 'goal', profile.goal);
+  setChoice($('goal-form'), 'activity', profile.activity);
+  setChoice($('goal-form'), 'weeklyRateKg', profile.weeklyRateKg);
   $('goal-form').elements.targetWeightKg.value = profile.targetWeightKg ?? '';
-  showActivityHint();
   showRateField();
   $('goal-current').textContent = describeTargets(profile);
   $('goal-preview').textContent = '';

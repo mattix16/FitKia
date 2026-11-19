@@ -40,6 +40,20 @@
   .btn-soft { @apply rounded-full bg-tint font-semibold text-deep transition duration-150 ease-spring hover:bg-track active:scale-[.97]; }
   .chip { @apply inline-flex min-h-9 items-center gap-1.5 rounded-full bg-tint px-3.5 text-xs font-semibold text-deep
     transition duration-150 ease-spring hover:bg-track active:scale-95; }
+  /* Scelta singola a schede (ui/forms.js, al posto della <select> di sistema): un radio vero, nascosto ma raggiungibile con la tastiera, dentro
+     un'etichetta che fa da scheda. Scelta = sfondo e anello del brand e segno di spunta a destra; il contorno di tastiera sta sulla scheda. */
+  .choice { @apply relative flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl bg-tint px-4 py-2.5 text-left
+    transition duration-150 ease-spring active:scale-[.98]; }
+  .choice:has(input:checked) { @apply bg-brand/15 ring-2 ring-brand; }
+  .choice:has(input:focus-visible) { outline: 2px solid rgb(var(--deep)); outline-offset: 2px; }
+  .choice-mark { @apply ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-faint/60 text-on-action transition duration-150; }
+  .choice-mark svg { @apply scale-50 opacity-0 transition duration-150 ease-spring; }
+  .choice:has(input:checked) .choice-mark { @apply border-brand bg-brand; }
+  .choice:has(input:checked) .choice-mark svg { @apply scale-100 opacity-100; }
+  /* Variante affiancata (Sesso, Ritmo): come i pulsanti 30g / 90g / Tutto del grafico del peso */
+  .segmented { @apply flex gap-1 rounded-full bg-tint p-1; }
+  .segmented .choice { @apply min-h-10 flex-1 justify-center rounded-full bg-transparent px-3 py-1.5 text-sm font-semibold text-muted; }
+  .segmented .choice:has(input:checked) { @apply bg-surface text-ink shadow-sm ring-0; }
   /* Pillola "Aggiungi" (sostituisce il vecchio cerchio con il "+" testuale) */
   .pill-add { @apply inline-flex shrink-0 items-center gap-1 rounded-full bg-tint px-3 py-1.5 text-xs font-semibold text-deep transition-colors; }
   .card { @apply hairline rounded-3xl bg-surface p-5; }
@@ -137,6 +151,10 @@ dialog::backdrop { animation: fade-in 200ms ease-out; }
 /* Pulsante "Aggiungi": bolla di vetro separata (come il pulsante accessorio della tab bar di iOS 26) */
 .add-action { transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1); }
 .add-action:active { transform: scale(.9); }
+/* Con la tastiera aperta (ui/keyboard.js imposta data-keyboard su html) la barra sparisce SUBITO (nello stesso fotogramma in cui la pagina si
+   restringe: così non si vede mai saltare sopra la tastiera) e non riceve tocchi; quando la tastiera si chiude risale con una breve animazione. */
+#main-nav { transition: transform 240ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease-out; }
+html[data-keyboard] #main-nav { transform: translateY(110%); opacity: 0; visibility: hidden; transition: none; }
 /* Toast globale (sopra la barra): scuro su chiaro e viceversa, sempre leggibile */
 #app-toast [data-undo] { color: rgb(var(--canvas)); }
 /* Tastiera: un contorno ben visibile su tutto ciò che si può attivare */
