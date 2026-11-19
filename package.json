@@ -3,8 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.cjs -i src/styles/input.css -o app.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.cjs -i src/styles/input.css -o app.css --watch",
+    "dev": "npm run build:css && npx serve .",
     "test": "node --test",
-    "dev": "npx serve .",
     "e2e": "node e2e/browser.cjs"
+  },
+  "devDependencies": {
+    "tailwindcss": "~3.4"
   }
 }

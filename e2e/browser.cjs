@@ -8,12 +8,11 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   const page = await ctx.newPage();
   const errors = []; page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push('console: ' + m.text()); });
-  // Tailwind e font non sono raggiungibili qui: stub minimo (il CDN vero genera le classi; qui basta nascondere gli elementi .hidden)
-  const theme = fs.readFileSync(root + '/index.html', 'utf8').match(/THEME-START[\s\S]*?THEME-END/)?.[0].replace(/^[^\n]*\n[\s\S]*?(?=:root)/, '') ?? '';
-  const lockRule = fs.readFileSync(root + '/index.html', 'utf8').match(/html:has\(dialog\[open\]\)\s*\{[^}]*\}/)?.[0];
-  ok('regola CSS di blocco scroll presente in index.html', !!lockRule, lockRule);
-  await page.route('**/cdn.tailwindcss.com/**', r => r.fulfill({ contentType: 'text/javascript', body: `window.tailwind = {}; (()=>{const s=document.createElement('style'); s.textContent=${JSON.stringify('.hidden{display:none !important}' + (lockRule ?? '') + theme)}; document.head.appendChild(s);})();` }));
-  await page.route('**/fonts.googleapis.com/**', r => r.fulfill({ contentType: 'text/css', body: '' }));
+  // Gli stili sono app.css (generato da Tailwind con "npm run build:css") e il server di prova lo serve come ogni altro file:
+  // niente più finto CDN. Se manca, il test lo dice subito invece di fallire su mille controlli di stile.
+  const lockRule = fs.readFileSync(root + '/src/styles/input.css', 'utf8').match(/html:has\(dialog\[open\]\)\s*\{[^}]*\}/)?.[0];
+  ok('regola CSS di blocco scroll presente in src/styles/input.css', !!lockRule, lockRule);
+  ok('app.css generato (npm run build:css)', fs.existsSync(root + '/app.css'));
   await ctx.addInitScript(() => { window.__vt = 0; const o = document.startViewTransition?.bind(document); if (o) document.startViewTransition = (...a) => { window.__vt++; return o(...a); }; });
   const $ = s => page.locator(s);
   const text = async s => (await $(s).textContent()).trim();
@@ -168,8 +167,6 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   const profile = JSON.stringify({ v: 1, data: { name: 'Mattia', age: 30, weightKg: 80, heightCm: 180, sex: 'male', goal: 'lose', activity: 'sedentary' } });
   const probe = async options => {
     const c = await browser.newContext({ viewport: { width: 390, height: 844 }, ...options });
-    await c.route('**/cdn.tailwindcss.com/**', r => r.fulfill({ contentType: 'text/javascript', body: `window.tailwind = {}; (()=>{const s=document.createElement('style'); s.textContent=${JSON.stringify('.hidden{display:none !important}' + theme)}; document.head.appendChild(s);})();` }));
-    await c.route('**/fonts.googleapis.com/**', r => r.fulfill({ contentType: 'text/css', body: '' }));
     await c.addInitScript(p => { if (!localStorage.getItem('fitkia:v1:profile')) localStorage.setItem('fitkia:v1:profile', p); window.__vt = 0; const o = document.startViewTransition?.bind(document); if (o) document.startViewTransition = (...a) => { window.__vt++; return o(...a); }; }, profile);
     const p = await c.newPage(); await p.goto('http://localhost:3000/'.replace('http://localhost:3000/', process.env.BASE_URL || 'http://localhost:3000/'));
     await p.waitForSelector('#app-section', { state: 'visible' });
@@ -179,7 +176,7 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   };
   const light = await probe({ colorScheme: 'light' }), dark = await probe({ colorScheme: 'dark' }), reduced = await probe({ reducedMotion: 'reduce' });
   ok('TEMA: chiaro = superficie bianca', light.surface === '255 255 255' && light.scheme === 'light', JSON.stringify(light));
-  ok('TEMA: scuro = superficie scura, segue il telefono', dark.surface === '24 33 28' && dark.scheme === 'dark', JSON.stringify(dark));
+  ok('TEMA: scuro = superficie scura, segue il telefono', dark.surface === '28 28 31' && dark.scheme === 'dark', JSON.stringify(dark));
   ok('cambio vista con dissolvenza (se supportata)', light.vt >= 1, 'startViewTransition chiamata ' + light.vt + ' volta/e');
   ok('"riduci animazioni": nessuna transizione e la navigazione funziona', reduced.vt === 0, 'chiamate: ' + reduced.vt);
 

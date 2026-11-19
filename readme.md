@@ -95,6 +95,7 @@ fitkia/
 │   ├── log.js           # logica pura: diario dei pasti
 │   ├── backup.js        # logica pura: export/import JSON
 │   ├── meta.js          # logica pura: promemoria del dispositivo (ultimo backup, suggerimenti, periodo del grafico)
+│   ├── styles/input.css # sorgente degli stili: Tailwind lo compila in app.css
 │   ├── validation.js    # logica pura: form grezzo -> dati tipizzati
 │   ├── storage.js       # unico file che tocca localStorage
 │   ├── store.js         # stato + pub/sub
@@ -131,14 +132,24 @@ Unità fisse, scritte nei nomi: **kg**, **cm**, **kcal**, **g**.
 
 ## Per iniziare
 
+Serve [Node.js](https://nodejs.org) LTS (consigliato installarlo con `fnm`). La prima volta, una sola volta: `npm install`.
+
 ```bash
-npm run dev    # serve la cartella (i moduli ES non funzionano da file://)
-npm test       # esegue i test della logica pura
+npm install          # scarica Tailwind nella cartella node_modules/ (non si committa)
+npm run dev          # genera app.css e serve la cartella su http://localhost:3000 (i moduli ES non funzionano da file://)
+npm test             # esegue i test della logica pura
+npm run build:css    # rigenera app.css (vedi sotto)
+npm run watch:css    # come build:css, ma resta in ascolto e rigenera a ogni modifica
 ```
 
-<Todo assignee="Mattia">
-  Quando aggiungerai la build di Tailwind, documenta qui il comando.
-</Todo>
+### Gli stili: `app.css` si genera, non si scrive
+
+Il CSS dell'app non gira più nel browser: **Tailwind lo compila prima**, e l'app carica un file già pronto (`app.css`). Per questo funziona anche offline al primo avvio.
+
+- `src/styles/input.css` è il sorgente: variabili del tema (chiaro/scuro) e componenti (`.card`, `.chip`...).
+- `tailwind.config.cjs` dice a Tailwind quali file leggere (`index.html` e `src/**/*.js`) e definisce i colori.
+- Tailwind genera **solo le classi che trova scritte per intero** in quei file. Per questo nel codice le classi variabili sono sempre stringhe intere (`'bg-danger'`), mai costruite a pezzi (`'bg-' + nome`): una classe costruita a pezzi non verrebbe generata.
+- `app.css` **si committa**, ma non si modifica a mano. Dopo aver cambiato delle classi in `index.html` o in `src/`, oppure `input.css`, rilancia `npm run build:css` (o tieni acceso `npm run watch:css`).
 
 ## Convenzioni
 
@@ -173,7 +184,7 @@ Fitkia tratta dati sulla salute. Scelta di progetto: **tutto resta sul dispositi
 | **M1 Onboarding + Dashboard** | Form validato, persistenza, anello e macro dallo stato | ✅ |
 | **M2 Diario** | Dizionario cibi, ricerca, grammatura, aggiunta al pasto | ✅ |
 | **M3 Salute quotidiana** | Acqua, peso, impostazioni, to-do integratori | ✅ |
-| **M4 PWA vera** | Tailwind compilato, font locali, manifest, icone, SW completo | ⬜ |
+| **M4 PWA vera** | Tailwind compilato ✅, font di sistema (niente da scaricare) ✅, SW completo ✅; restano le icone nuove (ancora verdi) | 🚧 |
 | **M5 Android** | Capacitor, notifiche locali | ⬜ |
 
 <Todo assignee="Mattia">
