@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sfondo dell'app, tema chiaro: lo stesso di --canvas in src/styles/input.css (il tema scuro è in values-night/colors.xml) -->
+    <!-- Sfondo dell'app, tema chiaro: lo stesso della variabile CSS "canvas" in src/styles/input.css (il tema scuro è in values-night/colors.xml).
+         Attenzione: in un commento XML la sequenza di due trattini non è ammessa e Gradle rifiuta il file. -->
     <color name="app_background">#F4F4F7</color>
 </resources>

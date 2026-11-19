@@ -48,6 +48,18 @@ test('MainActivity attiva lo schermo intero PRIMA di super.onCreate (come chiede
   assert.ok(source.includes('import androidx.activity.EdgeToEdge;'));
 });
 
+test('i commenti dei file XML sono validi: due trattini consecutivi dentro un commento fanno fallire la build di Gradle', { skip }, () => {
+  let comments = 0;
+  for (const file of [join(MAIN, 'AndroidManifest.xml'), ...xmlFiles(RES)]) {
+    for (const [, body] of readFileSync(file, 'utf8').matchAll(/<!--([\s\S]*?)-->/g)) {
+      assert.equal(body.includes('--'), false, `${file.replace(ROOT, '')}: il commento contiene "--" (es. un nome come --canvas): "${body.trim().slice(0, 70)}"`);
+      assert.equal(body.endsWith('-'), false, `${file.replace(ROOT, '')}: un commento non può finire con un trattino`);
+      comments++;
+    }
+  }
+  assert.ok(comments >= 3, `trovati solo ${comments} commenti`);
+});
+
 test('ogni risorsa Android a cui il manifest e i file XML fanno riferimento esiste', { skip }, () => {
   const defined = { color: new Set(), string: new Set(), style: new Set() };
   for (const file of [...xmlFiles(RES), ...xmlFiles(LIBRARY_RES)].filter(f => /[\\/]values[^\\/]*[\\/]/.test(f))) {

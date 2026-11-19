@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sfondo dell'app, tema scuro: lo stesso di --canvas in src/styles/input.css -->
+    <!-- Sfondo dell'app, tema scuro: lo stesso della variabile CSS "canvas" in src/styles/input.css -->
     <color name="app_background">#09090B</color>
 </resources>
