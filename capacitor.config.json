@@ -1,0 +1,14 @@
+{
+  "appId": "it.fitkia.app",
+  "appName": "Fitkia",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sfondo dell'app, tema chiaro: lo stesso di --canvas in src/styles/input.css (il tema scuro è in values-night/colors.xml) -->
+    <color name="app_background">#F4F4F7</color>
+</resources>

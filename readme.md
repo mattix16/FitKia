@@ -14,10 +14,11 @@ Un'app gratuita che si differenzia dalle altre tenendo **tutti i dati in locale*
 5. [Per iniziare](#per-iniziare)
 6. [Convenzioni](#convenzioni)
 7. [PWA e offline](#pwa-e-offline)
-8. [Privacy](#privacy)
-9. [Roadmap](#roadmap)
-10. [Decisioni architetturali](#decisioni-architetturali)
-11. [Crediti e licenza](#crediti-e-licenza)
+8. [Android (Capacitor)](#android-capacitor)
+9. [Privacy](#privacy)
+10. [Roadmap](#roadmap)
+11. [Decisioni architetturali](#decisioni-architetturali)
+12. [Crediti e licenza](#crediti-e-licenza)
 
 ## Funzionalità
 
@@ -40,7 +41,7 @@ Legenda: ✅ fatto · 🚧 in corso · ⬜ da fare
 - ✅ Affidabilità dei dati locali: migrazioni dello schema (`migrate()` in `storage.js`), avviso persistente se il salvataggio fallisce, promemoria del backup (mai fatto / oltre 14 giorni), richiesta di archiviazione persistente e suggerimento "Aggiungi alla Home" su Safari/iOS
 - ✅ Progressi (ex "Diario", la rotta resta `#diary`): ultimi 7 giorni con medie e giorni in target, registrazione e correzione dei giorni passati, grafico del peso con periodo 30g / 90g / Tutto
 - ✅ Peso obiettivo e ritmo settimanale (0,25 / 0,5 / 0,75 kg) che determina le calorie, con linea nel grafico e data stimata di arrivo
-- ⬜ Pacchetto Android (Capacitor)
+- 🚧 Pacchetto Android (Capacitor): progetto pronto in `android/`, backup con il menu "Condividi", tasto indietro e icone; resta da provarlo su un telefono
 
 <Todo assignee="Mattia">
   Riordina le voci in base alle tue priorità e sposta in "Dopo l'MVP" ciò che non serve alla prima versione. Un MVP è la versione più piccola che sia *davvero utile a te*.
@@ -86,8 +87,11 @@ flowchart LR
 ```text
 fitkia/
 ├── index.html
+├── app.css                  # GENERATO da Tailwind (npm run build:css): si committa, non si modifica a mano
+├── tailwind.config.cjs
 ├── manifest.webmanifest
 ├── sw.js
+├── capacitor.config.json    # app Android: nome, id e cartella web (www/)
 ├── src/
 │   ├── config.js        # costanti, limiti, unità
 │   ├── nutrition.js     # logica pura: BMR, target, anello, macro, grafico peso
@@ -98,9 +102,14 @@ fitkia/
 │   ├── styles/input.css # sorgente degli stili: Tailwind lo compila in app.css
 │   ├── validation.js    # logica pura: form grezzo -> dati tipizzati
 │   ├── storage.js       # unico file che tocca localStorage
+│   ├── native.js        # unico file che parla con Capacitor (app Android): condivisione del backup, tasto indietro
 │   ├── store.js         # stato + pub/sub
 │   ├── main.js          # bootstrap
 │   └── ui/              # DOM: onboarding, dashboard, diario, impostazioni, nav, ...
+├── scripts/             # build-www.mjs (cartella www/ per Capacitor), make-icons.mjs (icone PWA e Android)
+├── icons/               # icone della PWA (generate da make-icons.mjs)
+├── android/             # progetto Android (si apre con Android Studio), creato da Capacitor
+├── www/                 # GENERATA (npm run build:www): i file dell'app per Capacitor. Ignorata da git
 └── test/
 ```
 
@@ -109,6 +118,7 @@ fitkia/
 - `config.js` non importa nessuno.
 - `nutrition.js` e `validation.js` importano solo `config.js` (niente DOM, niente storage).
 - `storage.js` importa solo `config.js`.
+- `native.js` non importa nessuno: è l'unico file che parla con Capacitor, come `storage.js` lo è per `localStorage`. Legge `Capacitor` al momento della chiamata e nel browser non fa nulla.
 - `store.js` importa `storage.js` e `config.js`.
 - `ui/*` può importare `store`, `nutrition`, `validation`; **nessun altro modulo importa `ui/*`**.
 - Solo `main.js` collega le parti.
@@ -168,9 +178,54 @@ Il CSS dell'app non gira più nel browser: **Tailwind lo compila prima**, e l'ap
   Aggiungi una sezione "Come testare l'offline" (DevTools → Application → Service Workers → Offline).
 </Todo>
 
+## Android (Capacitor)
+
+L'app Android è **la stessa web app** dentro una WebView, impacchettata da [Capacitor](https://capacitorjs.com) (versione 8). Il progetto è già pronto nella cartella `android/`.
+
+### Cosa serve (una volta sola)
+
+- **Android Studio** 2025.2.1 o più recente ([developer.android.com/studio](https://developer.android.com/studio)). Include il JDK: non va installato a parte.
+- Al primo avvio, il wizard con l'installazione "Standard" scarica l'**Android SDK**. In *Settings → Languages & Frameworks → Android SDK* deve esserci almeno una *SDK Platform* con API 24 o superiore (il progetto compila con la 36).
+- Per provare l'app: un **emulatore** (*Device Manager → Create Device*) oppure un **telefono Android** con il "Debug USB" attivo.
+
+### Provarla
+
+```bash
+npm run android:sync    # rigenera app.css, ricrea www/ e la copia nel progetto Android
+npm run android:open    # apre il progetto in Android Studio
+```
+
+In Android Studio attendi la "Gradle sync" (la prima volta scarica diversi GB e può durare parecchi minuti) e premi ▶ **Run**. Dopo ogni modifica a HTML, CSS o JavaScript: `npm run android:sync` e di nuovo ▶. Dopo aver cambiato le icone (`npm run icons`) vale lo stesso.
+
+### Come funziona
+
+- `npm run build:www` copia nella cartella `www/` **solo** i file dell'app (`index.html`, `app.css`, `manifest.webmanifest`, `src/`, `icons/`): niente test, docs né service worker. Un file nuovo fuori da quelle voci non arriva nell'app: va aggiunto in `scripts/build-www.mjs`.
+- L'app gira da `https://localhost` dentro la WebView. Il service worker non serve (i file sono già nel pacchetto) e `main.js` non lo registra su `localhost`.
+- `src/native.js` è l'unico punto di contatto con Android. Non c'è un bundler: i plugin (`Share`, `Filesystem`, `App`) non si importano, li inietta il ponte di Capacitor in `window.Capacitor.Plugins`.
+  - **Backup**: la WebView non scarica file, quindi nell'app il backup si scrive nella cache e si apre il menu **Condividi** di Android (Drive, e-mail, Telegram...). Se l'utente chiude il menu senza scegliere, la data dell'ultimo backup non cambia.
+  - **Tasto indietro**: chiude la finestra aperta; poi torna a oggi o alla Home; dalla Home di oggi esce dall'app (logica pura in `router.js`, `backAction`).
+- **Dati**: la WebView ha la *sua* `localStorage`, separata da quella del sito o della PWA. Per portare i dati dal browser all'app: *Impostazioni → Scarica backup* nel browser, poi *Ripristina da un backup* nell'app.
+- Barre di sistema e tastiera: a tutto schermo con il plugin `SystemBars` di Capacitor 8 (configurato in `capacitor.config.json`); sfondo e schermata di avvio seguono il tema chiaro/scuro (`android/app/src/main/res/values*/colors.xml`, gli stessi colori di `--canvas` in `input.css`).
+
+### Scelte da conoscere
+
+- **`appId` = `it.fitkia.app`**: identifica l'app su Android e sul Play Store e **non si può più cambiare dopo la pubblicazione**. Se vuoi un altro, cambialo ora: `capacitor.config.json`, `android/app/build.gradle` (due punti), `strings.xml` e la cartella `java/it/fitkia/app/` con il `package` di `MainActivity.java`. Un test (`test/android.test.js`) controlla che combacino.
+- **`androidScheme: "https"` è fissato**: la `localStorage` è legata all'indirizzo (`https://localhost`); cambiarlo farebbe perdere i dati agli utenti.
+- **Backup automatico di Android disattivato** (`allowBackup="false"`): quello di Google copierebbe il diario e il peso nell'account Google dell'utente, contro la promessa "i dati restano sul dispositivo". Il backup è quello manuale (file JSON). Un test lo protegge; per cambiare idea modifica manifest e test.
+- Il permesso `INTERNET` è ancora nel manifest (lo mette il modello di Capacitor), ma l'app non fa richieste di rete. Toglierlo renderebbe verificabile "nessun invio di dati"; conviene farlo dopo la prima prova riuscita su un telefono.
+
+### Per pubblicare
+
+- Alza `versionCode` (intero, +1 a ogni rilascio) e `versionName` in `android/app/build.gradle`.
+- *Build → Generate Signed App Bundle / APK*. Conserva con cura la chiave di firma (keystore) e la sua password: senza, non si può più aggiornare l'app.
+
+### Icone
+
+Le icone (PWA e Android) si generano da un solo disegno: `scripts/make-icons.mjs`. Per cambiare colori o forma si modifica quel file, poi `npm run icons` e `npm run android:sync`.
+
 ## Privacy
 
-Fitkia tratta dati sulla salute. Scelta di progetto: **tutto resta sul dispositivo**, nessun account, nessun invio a server. Le stime caloriche non sono consigli medici.
+Fitkia tratta dati sulla salute. Scelta di progetto: **tutto resta sul dispositivo**, nessun account, nessun invio a server. Le stime caloriche non sono consigli medici. Nell'app Android il backup automatico di Google è disattivato: i dati lasciano il telefono solo per un backup che scegli tu.
 
 <Todo assignee="Mattia">
   Aggiungi export/cancellazione dei dati alla roadmap e decidi come mostrare l'avviso all'utente.
@@ -184,8 +239,8 @@ Fitkia tratta dati sulla salute. Scelta di progetto: **tutto resta sul dispositi
 | **M1 Onboarding + Dashboard** | Form validato, persistenza, anello e macro dallo stato | ✅ |
 | **M2 Diario** | Dizionario cibi, ricerca, grammatura, aggiunta al pasto | ✅ |
 | **M3 Salute quotidiana** | Acqua, peso, impostazioni, to-do integratori | ✅ |
-| **M4 PWA vera** | Tailwind compilato ✅, font di sistema (niente da scaricare) ✅, SW completo ✅; restano le icone nuove (ancora verdi) | 🚧 |
-| **M5 Android** | Capacitor, notifiche locali | ⬜ |
+| **M4 PWA vera** | Tailwind compilato, font di sistema (niente da scaricare), SW completo, icone nuove nella palette | ✅ |
+| **M5 Android** | Capacitor ✅ (progetto `android/`, backup con "Condividi", tasto indietro, icone); restano la prova su un telefono e le notifiche locali | 🚧 |
 
 <Todo assignee="Mattia">
   Per ogni milestone scrivi un "criterio di fatto" (es. M1: "ricarico la pagina e ritrovo i miei dati").

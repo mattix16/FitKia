@@ -5,7 +5,7 @@
 import { backupReminder, shouldShowInstallHint } from '../meta.js';
 import { daysWithEntries } from '../log.js';
 import { persistAll, snoozeBackupReminder, dismissInstallHint } from '../store.js';
-import { exportBackup } from './settings.js';
+import { exportBackup, backupDoneMessage, BACKUP_FAILED_MESSAGE } from './settings.js';
 import { flashStatus } from './forms.js';
 import { toneIcon } from './icons.js';
 
@@ -39,9 +39,13 @@ function currentNotice(state) {
   return backupReminder({ meta: state.meta, dataDays: daysWithEntries(state.logs) });
 }
 
-function downloadBackup() {
-  const name = exportBackup();
-  flashStatus($('app-toast'), `Backup scaricato: ${name}`, 4000);
+async function downloadBackup() {
+  try {
+    const name = await exportBackup();                   // null = nell'app Android l'utente ha chiuso il menu "Condividi": niente da dire
+    if (name) flashStatus($('app-toast'), backupDoneMessage(name), 4000);
+  } catch {
+    flashStatus($('app-toast'), BACKUP_FAILED_MESSAGE, 4000);
+  }
 }
 
 /** Collega gli eventi UNA volta sola. */

@@ -6,11 +6,12 @@ import { mountDashboard, renderDashboard } from './ui/dashboard.js';
 import { renderNav } from './ui/nav.js';
 import { mountSettings, renderSettings } from './ui/settings.js';
 import { mountDiary, renderDiary } from './ui/diary.js';
-import { viewFromHash } from './router.js';
+import { viewFromHash, backAction } from './router.js';
 import { mountMeals } from './ui/meals.js';
 import { mountFoodPanel, openFoodPanel } from './ui/foodPanel.js';
 import { mountNotices, renderNotices } from './ui/notices.js';
 import { requestPersistence } from './storage.js';
+import { onHardwareBack } from './native.js';
 
 const $ = id => document.getElementById(id);
 
@@ -70,6 +71,16 @@ function init() {
   // La tab Home vuol dire "oggi": toccarla riporta sempre al giorno corrente (un giorno passato si apre da Progressi).
   document.querySelector('[data-nav="home"]').addEventListener('click', () => setViewedDay(null));
   window.addEventListener('hashchange', () => syncView());
+  // Android: il tasto "indietro" chiude la finestra aperta, poi torna a oggi / alla Home; dalla Home di oggi esce dall'app (nel browser non fa nulla).
+  onHardwareBack(() => {
+    const dialog = document.querySelector('dialog[open]');
+    const { view, viewedDay } = getState();
+    const action = backAction({ hasOpenDialog: dialog !== null, view, viewedDay });
+    if (action === 'close-dialog') dialog.close();
+    else if (action === 'go-home') location.hash = '#home';
+    else if (action === 'go-today') setViewedDay(null);
+    return action !== 'exit';
+  });
   // App rimasta aperta (o in background) a cavallo della mezzanotte: tornando visibile, se il giorno è cambiato si ridisegna.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && todayKey() !== shownDay) render(getState());

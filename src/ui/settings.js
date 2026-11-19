@@ -6,6 +6,7 @@ import { buildBackup, backupFileName, describeBackup } from '../backup.js';
 import { getState, updateProfile, savePersonalData, resetAll, restoreAll, markBackupDone } from '../store.js';
 import { fillOptions, showFieldErrors, flashStatus, escapeHtml as esc } from './forms.js';
 import { describeTargets, formatInt, formatRate } from './format.js';
+import { isNativeApp, shareTextFile } from '../native.js';
 
 const $ = id => document.getElementById(id);
 const PERSONAL_FIELDS = ['name', 'age', 'weightKg', 'heightCm', 'sex'];
@@ -22,11 +23,23 @@ function downloadJson(filename, data) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Scarica il backup e ricorda quando (meta.lastBackupAt: il promemoria si basa su questa data). Restituisce il nome del file.
+/** Il testo di conferma dopo un backup: nel browser il file si scarica; nell'app Android si condivide (menu "Condividi"). */
+export const backupDoneMessage = name => (isNativeApp() ? `Backup condiviso: ${name}` : `Backup scaricato: ${name}`);
+export const BACKUP_FAILED_MESSAGE = 'Non sono riuscito a creare il backup. Riprova.';
+
+/** Crea il backup e ricorda quando (meta.lastBackupAt: il promemoria si basa su questa data).
+ *  Nel browser lo scarica; nell'app Android apre il menu "Condividi", perché la WebView non scarica file.
+ *  Restituisce il nome del file, oppure null se l'utente ha chiuso il menu senza scegliere: allora NESSUN backup è stato fatto e la data
+ *  dell'ultimo backup non cambia. Se la creazione fallisce lancia un errore (chi chiama mostra BACKUP_FAILED_MESSAGE).
  *  La usano anche gli avvisi (ui/notices.js): funziona anche se il salvataggio su disco non riesce, perché esporta lo stato in memoria. */
-export function exportBackup() {
+export async function exportBackup() {
   const name = backupFileName();
-  downloadJson(name, buildBackup(getState()));
+  const backup = buildBackup(getState());
+  if (isNativeApp()) {
+    if (await shareTextFile(name, JSON.stringify(backup, null, 2)) === 'canceled') return null;
+  } else {
+    downloadJson(name, backup);
+  }
   markBackupDone();
   return name;
 }
@@ -135,8 +148,13 @@ export function mountSettings() {
   });
 
   // --- export e cancellazione
-  $('export-button').addEventListener('click', () => {
-    flashStatus($('import-status'), `Backup scaricato: ${exportBackup()}`, 4000);
+  $('export-button').addEventListener('click', async () => {
+    try {
+      const name = await exportBackup();
+      if (name) flashStatus($('import-status'), backupDoneMessage(name), 4000);
+    } catch {
+      flashStatus($('import-status'), BACKUP_FAILED_MESSAGE, 4000);
+    }
   });
   $('delete-button').addEventListener('click', () => $('delete-dialog').showModal());
   $('delete-cancel').addEventListener('click', () => $('delete-dialog').close());
