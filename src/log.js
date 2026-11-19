@@ -16,6 +16,12 @@ export function defaultMealId(hour = new Date().getHours()) {
   return 'dinner';
 }
 
+/** Il primo pasto ancora vuoto del giorno (colazione, pranzo, cena, snack); se sono tutti pieni, l'ultimo. Per aggiungere a un giorno passato,
+ *  dove "il pasto dell'ora" non ha senso. */
+export function firstEmptyMealId(day) {
+  return (MEALS.find(meal => (day[meal.id] ?? []).length === 0) ?? MEALS.at(-1)).id;
+}
+
 /** Una voce salva uno SNAPSHOT dei valori: resta corretta anche se il dizionario o l'API cambiano. */
 export function makeEntry(food, grams) {
   return { id: newId(), foodId: food.id, name: food.name, grams, ...nutrientsFor(food, grams) };
@@ -146,6 +152,9 @@ export function normalizeLogs(raw) {
 
 export const mealTotals = (day, mealId) => sumEntries(day[mealId] ?? []);
 export const dayTotals = day => sumEntries(Object.values(day).flat());
+
+/** Quanti giorni hanno almeno un alimento (i giorni vuoti non contano): dice se c'è qualcosa che vale la pena salvare. */
+export const daysWithEntries = logs => Object.values(logs).filter(day => Object.values(day).some(entries => entries.length > 0)).length;
 
 /**
  * "Prossimo passo" della home: UN solo suggerimento, il più utile adesso. Puro: riceve valori semplici, restituisce dati.

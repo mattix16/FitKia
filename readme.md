@@ -37,6 +37,9 @@ Legenda: ✅ fatto · 🚧 in corso · ⬜ da fare
 **Dopo l'MVP**
 - ✅ To-do giornaliera integratori (es. creatina)
 - ✅ Backup e ripristino dei dati in JSON validato, pasti preferiti e "copia da ieri"
+- ✅ Affidabilità dei dati locali: migrazioni dello schema (`migrate()` in `storage.js`), avviso persistente se il salvataggio fallisce, promemoria del backup (mai fatto / oltre 14 giorni), richiesta di archiviazione persistente e suggerimento "Aggiungi alla Home" su Safari/iOS
+- ✅ Progressi (ex "Diario", la rotta resta `#diary`): ultimi 7 giorni con medie e giorni in target, registrazione e correzione dei giorni passati, grafico del peso con periodo 30g / 90g / Tutto
+- ✅ Peso obiettivo e ritmo settimanale (0,25 / 0,5 / 0,75 kg) che determina le calorie, con linea nel grafico e data stimata di arrivo
 - ⬜ Pacchetto Android (Capacitor)
 
 <Todo assignee="Mattia">
@@ -91,6 +94,7 @@ fitkia/
 │   ├── habits.js        # logica pura: acqua, peso, integratori
 │   ├── log.js           # logica pura: diario dei pasti
 │   ├── backup.js        # logica pura: export/import JSON
+│   ├── meta.js          # logica pura: promemoria del dispositivo (ultimo backup, suggerimenti, periodo del grafico)
 │   ├── validation.js    # logica pura: form grezzo -> dati tipizzati
 │   ├── storage.js       # unico file che tocca localStorage
 │   ├── store.js         # stato + pub/sub

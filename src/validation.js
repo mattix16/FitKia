@@ -1,6 +1,6 @@
 // Validation.js => riceve i valori grezzi del form e restituisce { ok, errors, value }.
 import { LIMITS, SEX_OFFSET, GOALS, ACTIVITY, MAX_SUPPLEMENTS, MAX_CUSTOM_FOODS, MAX_FAVORITES, MAX_FAVORITE_ITEMS,
-  DEFAULT_SETTINGS, SCHEMA_VERSION, MEALS, WATER, BACKUP } from './config.js';
+  DEFAULT_SETTINGS, SCHEMA_VERSION, MEALS, WATER, BACKUP, RATES, DEFAULT_RATE } from './config.js';
 import { isPlausibleFood } from './nutrition.js';
 
 /** Funzione di integrazione "72,5" e "72.5" -> 72.5 ; stringa vuota o testo -> NaN */
@@ -31,7 +31,14 @@ export function validateProfile(raw) {
   return { ok, errors, value: ok ? { name, age, weightKg, heightCm, sex, ...settings.value } : null };
 }
 
-export function validateGoalSettings(raw) {
+/**
+ * Obiettivo, attività, peso obiettivo (facoltativo) e ritmo settimanale. Una sola validazione per onboarding, Impostazioni e backup.
+ * `weightKg` (il peso attuale) serve SOLO al controllo "l'obiettivo sta dalla parte giusta": lo passa la scheda Impostazioni.
+ * Onboarding, dati personali e backup non lo passano, così non falliscono per un campo che non vedono.
+ *   - peso obiettivo vuoto = nessuno; con `lose` deve stare sotto il peso attuale, con `gain` sopra, con `maintain` non conta
+ *   - ritmo vuoto/assente = quello proposto per l'obiettivo (DEFAULT_RATE); 'maintain' tiene un valore neutro che non usa
+ */
+export function validateGoalSettings(raw, { weightKg = null } = {}) {
   const errors = {};
   const goal = String(raw.goal ?? '').trim();
   const activity = String(raw.activity ?? '').trim();
@@ -39,8 +46,29 @@ export function validateGoalSettings(raw) {
   if (!GOALS.includes(goal)) errors.goal = 'Seleziona un obiettivo valido.';
   if (!Object.hasOwn(ACTIVITY, activity)) errors.activity = 'Seleziona un livello di attività valido.';
 
+  let targetWeightKg = null;
+  const rawTarget = String(raw.targetWeightKg ?? '').trim();
+  if (rawTarget !== '') {
+    const target = Math.round(parseNumber(rawTarget) * 10) / 10;
+    if (!inRange(target, LIMITS.weightKg)) errors.targetWeightKg = `Peso obiettivo tra ${LIMITS.weightKg.min} e ${LIMITS.weightKg.max} kg.`;
+    else targetWeightKg = target;
+  }
+  if (targetWeightKg !== null && Number.isFinite(weightKg)) {
+    const shown = String(weightKg).replace('.', ',');
+    if (goal === 'lose' && targetWeightKg >= weightKg) errors.targetWeightKg = `Per perdere peso l'obiettivo deve stare sotto i ${shown} kg attuali.`;
+    if (goal === 'gain' && targetWeightKg <= weightKg) errors.targetWeightKg = `Per aumentare di peso l'obiettivo deve stare sopra i ${shown} kg attuali.`;
+  }
+
+  let weeklyRateKg = DEFAULT_RATE[goal] ?? DEFAULT_RATE.lose;
+  const rawRate = String(raw.weeklyRateKg ?? '').trim();
+  if (rawRate !== '') {
+    const rate = parseNumber(rawRate);
+    if (RATES.includes(rate)) weeklyRateKg = rate;
+    else errors.weeklyRateKg = 'Scegli un ritmo valido.';
+  }
+
   const ok = Object.keys(errors).length === 0;
-  return { ok, errors, value: ok ? { goal, activity } : null };
+  return { ok, errors, value: ok ? { goal, activity, targetWeightKg, weeklyRateKg } : null };
 }
 
 /** Peso del diario: stessi limiti del profilo, arrotondato a 1 decimale. */

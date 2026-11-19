@@ -26,7 +26,7 @@ test('media mobile: ordine qualsiasi, un peso per giorno (vince l\'ultimo), camb
 });
 
 test('grafico: 0 pesate -> niente da disegnare; 1 pesata -> punto al centro e nessuna linea', () => {
-  assert.deepEqual(weightTrendChart([], area), { points: [], weightLine: '', averageLine: '', minKg: null, maxKg: null, grid: [] });
+  assert.deepEqual(weightTrendChart([], area), { points: [], weightLine: '', averageLine: '', minKg: null, maxKg: null, grid: [], target: null });
   const single = weightTrendChart([{ date: '2026-11-12', kg: 80 }], area);
   assert.equal(single.points.length, 1);
   assert.equal(single.points[0].x, 160);
@@ -55,4 +55,50 @@ test('grafico: una variazione minima non diventa una montagna', () => {
   const { points } = weightTrendChart([{ date: '2026-11-12', kg: 80.1 }, { date: '2026-11-10', kg: 80 }], area);
   assert.deepEqual(points.map(p => p.date), ['2026-11-10', '2026-11-12']);
   assert.ok(points[0].y > 40 && points[1].y < 80);
+});
+
+// ---------- B3: periodo mostrato ----------
+const TODAY = '2026-11-19';
+const longRun = [
+  { date: '2026-09-20', kg: 95 },   // molto prima
+  { date: '2026-10-20', kg: 90 },   // 30 giorni fa: appena fuori da una finestra di 30 giorni (oggi + i 29 prima)
+  { date: '2026-10-21', kg: 80 },   // 29 giorni fa: dentro
+  { date: '2026-11-19', kg: 79 },
+];
+
+test('periodo: 30 giorni = oggi e i 29 prima; Tutto (null) li mostra tutti; senza `today` non si taglia', () => {
+  assert.deepEqual(weightTrendChart(longRun, { ...area, rangeDays: 30, today: TODAY }).points.map(p => p.date), ['2026-10-21', '2026-11-19']);
+  assert.equal(weightTrendChart(longRun, { ...area, rangeDays: 90, today: TODAY }).points.length, 4);       // il 20 settembre è 60 giorni fa: dentro i 90
+  assert.equal(weightTrendChart(longRun, { ...area, rangeDays: null, today: TODAY }).points.length, 4);
+  assert.equal(weightTrendChart(longRun, { ...area, rangeDays: 30 }).points.length, 4);
+  assert.deepEqual(weightTrendChart(longRun, { ...area, rangeDays: 7, today: TODAY }).points.map(p => p.date), ['2026-11-19']);
+  assert.deepEqual(weightTrendChart([{ date: '2026-01-01', kg: 80 }], { ...area, rangeDays: 30, today: TODAY }).points, []);   // nessuna pesata nel periodo
+});
+
+test('periodo: la media mobile si calcola su TUTTE le pesate e poi si taglia (il primo punto del periodo ha la sua media vera)', () => {
+  const { points } = weightTrendChart(longRun, { ...area, rangeDays: 30, today: TODAY });
+  assert.equal(points[0].avgKg, 85);       // 90 (20 ott, fuori periodo) e 80 (21 ott): la finestra di 7 giorni li include entrambi
+  assert.equal(points[1].avgKg, 79);       // il 19 novembre è solo: la pausa azzera la media
+});
+
+// ---------- B2: linea del peso obiettivo ----------
+const near = [{ date: '2026-11-10', kg: 80 }, { date: '2026-11-12', kg: 81 }];
+
+test('peso obiettivo vicino ai dati: entra nella scala (la distanza si vede) e non è "clamped"', () => {
+  const { target, points } = weightTrendChart(near, { ...area, targetKg: 78 });
+  assert.deepEqual(target, { kg: 78, y: 100, clamped: false, direction: null });       // è il punto più basso: in fondo all'area
+  assert.equal(points[1].y, 20);                                                       // 81 resta il più alto
+  assert.ok(points[0].y > 20 && points[0].y < 100);
+});
+
+test('peso obiettivo lontano (oltre 6 kg dai dati): sta sul bordo e NON schiaccia la scala dei pesi', () => {
+  const without = weightTrendChart(near, area);
+  const below = weightTrendChart(near, { ...area, targetKg: 60 });
+  assert.deepEqual(below.target, { kg: 60, y: 110, clamped: true, direction: 'below' });   // nel margine sotto l'area dei dati (120 - 20/2)
+  assert.deepEqual(below.points, without.points);                                      // la curva è identica a quella senza obiettivo
+  assert.deepEqual(weightTrendChart(near, { ...area, targetKg: 100 }).target, { kg: 100, y: 10, clamped: true, direction: 'above' });   // nel margine sopra
+});
+
+test('peso obiettivo assente o non valido -> nessuna linea', () => {
+  for (const targetKg of [null, undefined, NaN]) assert.equal(weightTrendChart(near, { ...area, targetKg }).target, null);
 });

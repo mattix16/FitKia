@@ -1,4 +1,6 @@
-// Finestra "aggiungi alimento": copia da ieri, preferiti, recenti, ricerca, grammi, porzioni, modifica di una voce, alimento personale, annulla.
+// Finestra "aggiungi alimento": copia dal giorno prima, preferiti, recenti, ricerca, grammi, porzioni, modifica di una voce, alimento personale, annulla.
+// Lavora su UN giorno, fissato all'apertura (`currentDay`): oggi, o un giorno passato scelto in Progressi. Ogni azione passa quella data allo store,
+// così anche un "Annulla" premuto dopo agisce sul giorno giusto.
 import { searchFoods, findFood } from '../data/foods.js';
 import { nutrientsFor } from '../nutrition.js';
 import { parseNumber, validateCustomFood, validateFavoriteName } from '../validation.js';
@@ -6,28 +8,33 @@ import { recentFoods, todayKey, favoriteKcal, scaleEntry } from '../log.js';
 import { MEALS, LIMITS, MAX_RESULTS, RECENT_FOODS_SHOWN, RECENT_DAYS } from '../config.js';
 import { escapeHtml as esc, showFieldErrors } from './forms.js';
 import { showUndo } from './toast.js';
-import { formatFoodCount } from './format.js';
-import { addFood, removeFood, restoreEntry, updateEntry, replaceEntry, repeatYesterday, addCustomFood, deleteCustomFood, getState, getToday, subscribe,
-  yesterdayCount, saveFavorite, deleteFavorite, addFavoriteToMeal } from '../store.js';
+import { formatFoodCount, formatWeekdayDate } from './format.js';
+import { addFood, removeFood, restoreEntry, updateEntry, replaceEntry, repeatPreviousDay, addCustomFood, deleteCustomFood, getState, getDayLog, getViewedDay,
+  subscribe, previousDayCount, saveFavorite, deleteFavorite, addFavoriteToMeal } from '../store.js';
 
 const $ = id => document.getElementById(id);
 
 let currentMeal = null; // pasto per cui la finestra è aperta
+let currentDay = null;  // giorno ('YYYY-MM-DD') per cui la finestra è aperta: fissato all'apertura, non cambia finché è aperta
 let results = [];       // ultimi risultati di ricerca
 let selected = null;    // alimento scelto (nuova aggiunta)
 let editing = null;     // { mealId, entry }: voce già aggiunta di cui si stanno cambiando i grammi (esclusivo con `selected`)
 
 const customFoods = () => getState().customFoods;
+const dayLog = () => getDayLog(currentDay);
+/** "di ieri" se si lavora su oggi, altrimenti "del giorno prima" (si copia dal giorno precedente a quello aperto). */
+const fromDayBefore = () => (currentDay === todayKey() ? 'di ieri' : 'del giorno prima');
 const readGrams = () => {
   const grams = parseNumber($('food-grams').value);
   return grams >= LIMITS.grams.min && grams <= LIMITS.grams.max ? grams : null; // null = non valido
 };
 
-/** Aggiunge e offre subito "Annulla". `meal` si legge ORA: il toast può essere premuto più tardi. */
+/** Aggiunge e offre subito "Annulla". `meal` e `day` si leggono ORA: il toast può essere premuto più tardi. */
 function addWithUndo(food, grams) {
   const meal = currentMeal;
-  const entry = addFood(meal, food, grams);
-  showUndo($('food-undo'), `${food.name} aggiunto`, () => removeFood(meal, entry.id));
+  const day = currentDay;
+  const entry = addFood(meal, food, grams, day);
+  showUndo($('food-undo'), `${food.name} aggiunto`, () => removeFood(meal, entry.id, day));
 }
 
 async function showResults() {
@@ -44,10 +51,11 @@ async function showResults() {
 /** Preferiti del pasto aperto per primi, poi gli altri (una colazione salvata si può usare anche come snack). */
 const sortedFavorites = () => [...getState().favorites].sort((a, b) => Number(b.mealId === currentMeal) - Number(a.mealId === currentMeal));
 
-/** "Come ieri", "Preferiti" e "Recenti": visibili solo se la ricerca è vuota e c'è qualcosa da proporre. */
+/** "Copia dal giorno prima", "Preferiti" e "Recenti": visibili solo se la ricerca è vuota e c'è qualcosa da proporre. */
 function renderQuick() {
   // I recenti di questo pasto vengono per primi (la colazione propone prima ciò che di solito si mangia a colazione).
-  const recents = recentFoods(getState().logs, RECENT_FOODS_SHOWN, todayKey(), RECENT_DAYS, currentMeal)
+  // Contano i giorni a partire da quello aperto all'indietro: su un giorno passato non si vede mai il "futuro".
+  const recents = recentFoods(getState().logs, RECENT_FOODS_SHOWN, currentDay, RECENT_DAYS, currentMeal)
     .filter(item => findFood(item.foodId, customFoods()));          // un alimento personale eliminato non si propone più
   $('food-recents').innerHTML = recents.map(item => `<li><button type="button" data-recent-id="${esc(item.foodId)}" data-grams="${item.grams}"
       class="chip !min-h-11 !px-4 !text-sm">${esc(item.name)} · ${item.grams} g</button></li>`).join('');
@@ -62,9 +70,9 @@ function renderQuick() {
         <span class="text-xs text-muted">${f.items.length} · ${favoriteKcal(f)} kcal</span></button>
       <button type="button" data-delete-favorite-id="${esc(f.id)}" aria-label="Elimina il preferito ${esc(f.name)}" class="h-11 w-11 shrink-0 rounded-full bg-tint text-muted"><svg aria-hidden="true" class="mx-auto" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg></button></li>`).join('');
 
-  const count = yesterdayCount(currentMeal);
+  const count = previousDayCount(currentMeal, currentDay);
   $('food-repeat').classList.toggle('hidden', count === 0);
-  $('food-repeat').textContent = `↻ Copia da ieri (${formatFoodCount(count)})`;
+  $('food-repeat').textContent = `↻ Copia ${currentDay === todayKey() ? 'da ieri' : 'dal giorno prima'} (${formatFoodCount(count)})`;
   $('food-recents-block').classList.toggle('hidden', recents.length === 0);
   $('food-favorites-block').classList.toggle('hidden', favorites.length === 0);
   $('food-quick').classList.toggle('hidden', $('food-search').value.trim() !== '' || (recents.length === 0 && count === 0 && favorites.length === 0));
@@ -123,7 +131,7 @@ function showPreview() {
 
 /** Tocco su una voce già aggiunta: i suoi grammi si modificano nel picker. */
 function startEdit(entryId) {
-  const entry = (getToday()[currentMeal] ?? []).find(e => e.id === entryId);
+  const entry = (dayLog()[currentMeal] ?? []).find(e => e.id === entryId);
   if (!entry) return;
   selected = null;
   editing = { mealId: currentMeal, entry };
@@ -132,7 +140,7 @@ function startEdit(entryId) {
 }
 
 function renderEntries() {
-  const entries = getToday()[currentMeal] ?? [];
+  const entries = dayLog()[currentMeal] ?? [];
   $('food-entries').innerHTML = entries.map(e => `<li class="flex items-center gap-3 rounded-xl bg-tint/60 px-4 py-2.5${editing?.entry.id === e.id ? ' ring-2 ring-brand/40' : ''}">
       <button type="button" data-edit-entry-id="${esc(e.id)}" aria-label="Modifica i grammi di ${esc(e.name)}, ora ${e.grams} g"
         class="min-h-11 min-w-0 flex-1 truncate text-left text-sm">${esc(e.name)} · <span class="font-semibold text-deep">${e.grams} g</span></button>
@@ -189,8 +197,10 @@ export function mountFoodPanel() {
 
   $('food-repeat').addEventListener('click', () => {
     const meal = currentMeal;
-    const copies = repeatYesterday(meal);
-    showUndo($('food-undo'), `Aggiunti ${formatFoodCount(copies.length)} di ieri`, () => copies.forEach(copy => removeFood(meal, copy.id)));
+    const day = currentDay;
+    const from = fromDayBefore();
+    const copies = repeatPreviousDay(meal, day);
+    showUndo($('food-undo'), `Aggiunti ${formatFoodCount(copies.length)} ${from}`, () => copies.forEach(copy => removeFood(meal, copy.id, day)));
   });
 
   $('food-add').addEventListener('click', () => {
@@ -198,10 +208,11 @@ export function mountFoodPanel() {
     if (!grams) return;
     if (editing) {                                        // "Aggiorna": cambia i grammi della voce, con "Annulla"
       const { mealId, entry } = editing;
+      const day = currentDay;
       closePicker();
       if (grams !== entry.grams) {
-        const previous = updateEntry(mealId, entry.id, grams);
-        if (previous) showUndo($('food-undo'), `${previous.name}: ${previous.grams} g → ${grams} g`, () => replaceEntry(mealId, previous));
+        const previous = updateEntry(mealId, entry.id, grams, day);
+        if (previous) showUndo($('food-undo'), `${previous.name}: ${previous.grams} g → ${grams} g`, () => replaceEntry(mealId, previous, day));
       }
       renderEntries();
       return;
@@ -225,9 +236,10 @@ export function mountFoodPanel() {
     const button = event.target.closest('[data-favorite-id]');
     if (!button) return;
     const meal = currentMeal;
+    const day = currentDay;
     const favorite = getState().favorites.find(f => f.id === button.dataset.favoriteId);
-    const copies = addFavoriteToMeal(meal, button.dataset.favoriteId);
-    showUndo($('food-undo'), `${favorite.name}: aggiunti ${formatFoodCount(copies.length)}`, () => copies.forEach(copy => removeFood(meal, copy.id)));
+    const copies = addFavoriteToMeal(meal, button.dataset.favoriteId, day);
+    showUndo($('food-undo'), `${favorite.name}: aggiunti ${formatFoodCount(copies.length)}`, () => copies.forEach(copy => removeFood(meal, copy.id, day)));
   });
 
   const favoriteForm = $('favorite-form');
@@ -235,11 +247,11 @@ export function mountFoodPanel() {
   favoriteForm.addEventListener('submit', event => {
     event.preventDefault();
     const names = getState().favorites.map(f => f.name);
-    const itemCount = (getToday()[currentMeal] ?? []).length;
+    const itemCount = (dayLog()[currentMeal] ?? []).length;
     const { ok, errors, value } = validateFavoriteName(Object.fromEntries(new FormData(favoriteForm)), names, itemCount);
     showFieldErrors(favoriteForm, errors);
     if (!ok) return;
-    const saved = saveFavorite(value.name, currentMeal);
+    const saved = saveFavorite(value.name, currentMeal, currentDay);
     favoriteForm.reset();
     showUndo($('food-undo'), `★ "${value.name}" salvato nei preferiti`, () => deleteFavorite(saved.id));
   });
@@ -250,8 +262,9 @@ export function mountFoodPanel() {
     const button = event.target.closest('[data-entry-id]');
     if (!button) return;
     const meal = currentMeal;
-    const removed = removeFood(meal, button.dataset.entryId);
-    if (removed) showUndo($('food-undo'), `${removed.name} rimosso`, () => restoreEntry(meal, removed));
+    const day = currentDay;
+    const removed = removeFood(meal, button.dataset.entryId, day);
+    if (removed) showUndo($('food-undo'), `${removed.name} rimosso`, () => restoreEntry(meal, removed, day));
   });
 
   // Alimento personale
@@ -273,16 +286,19 @@ export function mountFoodPanel() {
   subscribe(() => {
     if (!$('food-dialog').open) return;
     // La voce che si stava modificando non c'è più (rimossa, o aggiunta annullata): si chiude il picker.
-    if (editing && !(getToday()[editing.mealId] ?? []).some(entry => entry.id === editing.entry.id)) closePicker();
+    if (editing && !(getDayLog(currentDay)[editing.mealId] ?? []).some(entry => entry.id === editing.entry.id)) closePicker();
     renderEntries();
     renderQuick();
   });
 }
 
+/** Apre la finestra per `mealId` sul giorno mostrato in Home (oggi o uno passato). */
 export function openFoodPanel(mealId) {
   currentMeal = mealId;
+  currentDay = getViewedDay();                           // fissato ORA: da qui in poi la finestra non cambia giorno
   closePicker();
-  $('food-dialog-title').textContent = MEALS.find(meal => meal.id === mealId).label;
+  const label = MEALS.find(meal => meal.id === mealId).label;
+  $('food-dialog-title').textContent = currentDay === todayKey() ? label : `${label} · ${formatWeekdayDate(currentDay)}`;   // su un giorno passato lo dice
   $('food-search').value = '';
   $('food-undo').textContent = '';
   $('favorite-error').textContent = '';

@@ -1,5 +1,5 @@
 // Service Worker di Fitkia. Cambia VERSION a ogni release: è ciò che fa arrivare gli aggiornamenti agli utenti.
-const VERSION = 'v11';
+const VERSION = 'v13';
 const CACHE = `fitkia-${VERSION}`;
 
 // App shell: tutto ciò che serve per aprire l'app senza rete.
@@ -7,7 +7,7 @@ const PRECACHE = [
   './', './index.html', './manifest.webmanifest',
   './src/main.js', './src/config.js', './src/nutrition.js', './src/validation.js',
   './src/storage.js', './src/store.js', './src/log.js', './src/router.js', './src/profile.js', './src/id.js', './src/habits.js', './src/backup.js', './src/ui/nav.js', './src/ui/forms.js', './src/ui/toast.js', './src/ui/settings.js', './src/ui/format.js', './src/ui/icons.js', './src/ui/diary.js', './src/ui/history.js', './src/ui/water.js', './src/ui/weight.js', './src/ui/supplements.js', './src/data/foods.js',
-  './src/ui/onboarding.js', './src/ui/dashboard.js', './src/ui/meals.js', './src/ui/foodPanel.js',
+  './src/ui/onboarding.js', './src/ui/dashboard.js', './src/ui/meals.js', './src/ui/foodPanel.js', './src/meta.js', './src/ui/notices.js',
   './icons/icon-192.png', './icons/icon-512.png',
 ];
 

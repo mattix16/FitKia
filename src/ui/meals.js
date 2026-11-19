@@ -1,14 +1,16 @@
-// Elenco dei pasti nella home. Ogni pasto: card che apre il pannello + (se oggi è vuoto e ieri no) "Come ieri" con un tocco.
+// Elenco dei pasti nella home. Ogni pasto: card che apre il pannello + (se il giorno è vuoto e quello prima no) "Come ieri" con un tocco.
+// Su un giorno passato "ieri" diventa "il giorno prima" (si copia dal giorno precedente a quello mostrato).
 import { MEALS } from '../config.js';
 import { mealTotals } from '../log.js';
-import { repeatYesterday, removeFood } from '../store.js';
+import { repeatPreviousDay, removeFood, getViewedDay, isViewingToday } from '../store.js';
 import { showUndo } from './toast.js';
 import { formatFoodCount } from './format.js';
 import { toneIcon } from './icons.js';
 
 const fmt = new Intl.NumberFormat('it-IT');
 
-export function renderMeals(container, day, yesterday = {}) {
+export function renderMeals(container, day, yesterday = {}, { isToday = true } = {}) {
+  const dayBefore = isToday ? 'ieri' : 'il giorno prima';
   container.innerHTML = MEALS.map(meal => {
     const entries = day[meal.id] ?? [];
     const previous = yesterday[meal.id] ?? [];
@@ -25,8 +27,8 @@ export function renderMeals(container, day, yesterday = {}) {
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 2v10M2 7h10"/></svg>Aggiungi</span>
       </button>
       ${canRepeat ? `<button type="button" data-repeat-meal="${meal.id}" class="chip self-start ml-2 tabular-nums"
-          aria-label="Copia ${meal.label.toLowerCase()} di ieri: ${formatFoodCount(previous.length)}, ${fmt.format(mealTotals(yesterday, meal.id).kcal)} kcal">
-          <span aria-hidden="true">↻</span> Come ieri · ${formatFoodCount(previous.length)} · ${fmt.format(mealTotals(yesterday, meal.id).kcal)} kcal</button>` : ''}
+          aria-label="Copia ${meal.label.toLowerCase()} di ${dayBefore}: ${formatFoodCount(previous.length)}, ${fmt.format(mealTotals(yesterday, meal.id).kcal)} kcal">
+          <span aria-hidden="true">↻</span> Come ${dayBefore} · ${formatFoodCount(previous.length)} · ${fmt.format(mealTotals(yesterday, meal.id).kcal)} kcal</button>` : ''}
     </li>`;
   }).join('');
 
@@ -45,10 +47,12 @@ export function mountMeals(container, onSelect) {
     const repeat = event.target.closest('[data-repeat-meal]');
     if (repeat) {
       const mealId = repeat.dataset.repeatMeal;
-      const copies = repeatYesterday(mealId);              // snapshot copiati con id nuovi: i totali si ricalcolano da soli
+      const date = getViewedDay();                         // il giorno su cui si copia, fissato ORA: l'annulla agirà su quello
+      const from = isViewingToday() ? 'di ieri' : 'del giorno prima';
+      const copies = repeatPreviousDay(mealId, date);      // snapshot copiati con id nuovi: i totali si ricalcolano da soli
       const label = MEALS.find(meal => meal.id === mealId).label;
-      showUndo(document.getElementById('app-toast'), `${label}: copiati ${formatFoodCount(copies.length)} di ieri`,
-        () => copies.forEach(copy => removeFood(mealId, copy.id)));
+      showUndo(document.getElementById('app-toast'), `${label}: copiati ${formatFoodCount(copies.length)} ${from}`,
+        () => copies.forEach(copy => removeFood(mealId, copy.id, date)));
       return;
     }
     const button = event.target.closest('[data-meal-id]');

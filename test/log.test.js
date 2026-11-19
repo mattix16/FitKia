@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyDay, makeEntry, addEntry, removeEntry, sumEntries, dayTotals, mealTotals, defaultMealId } from '../src/log.js';
-import { recentFoods, copyMeal, normalizeLogs, scaleEntry, replaceEntry } from '../src/log.js';
+import { recentFoods, copyMeal, normalizeLogs, scaleEntry, replaceEntry, daysWithEntries, firstEmptyMealId } from '../src/log.js';
 
 const food = { id: 'banana', name: 'Banana', per100g: { kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 } };
 
@@ -121,4 +121,24 @@ test('recentFoods con mealId: prima gli alimenti di quel pasto, con la porzione 
   // snack: la mela resta prima; la banana, usata una volta come snack, propone i 999 g di quello snack
   assert.deepEqual(recentFoods(logs, 5, '2026-11-12', 30, 'snack').map(f => [f.foodId, f.grams]), [['mela', 120], ['banana', 999]]);
   assert.equal(recentFoods(logs, 1, '2026-11-12', 30, 'breakfast').length, 1);
+});
+
+test('firstEmptyMealId: il primo pasto vuoto del giorno, o l\'ultimo se sono tutti pieni', () => {
+  assert.equal(firstEmptyMealId(emptyDay()), 'breakfast');
+  assert.equal(firstEmptyMealId({}), 'breakfast');
+  assert.equal(firstEmptyMealId(addEntry(emptyDay(), 'breakfast', makeEntry(banana, 100))), 'lunch');
+  const skipLunch = addEntry(addEntry(emptyDay(), 'breakfast', makeEntry(banana, 100)), 'dinner', makeEntry(banana, 100));
+  assert.equal(firstEmptyMealId(skipLunch), 'lunch');                                  // il primo VUOTO, non il primo dopo l'ultimo pieno
+  const full = ['breakfast', 'lunch', 'dinner', 'snack'].reduce((day, meal) => addEntry(day, meal, makeEntry(banana, 100)), emptyDay());
+  assert.equal(firstEmptyMealId(full), 'snack');
+});
+
+test('daysWithEntries: conta solo i giorni con almeno un alimento', () => {
+  const logs = {
+    '2026-11-10': addEntry(emptyDay(), 'lunch', makeEntry(banana, 100)),
+    '2026-11-11': emptyDay(),                                          // giorno vuoto: non conta
+    '2026-11-12': addEntry(emptyDay(), 'snack', makeEntry(mela, 50)),
+  };
+  assert.equal(daysWithEntries(logs), 2);
+  assert.equal(daysWithEntries({}), 0);
 });

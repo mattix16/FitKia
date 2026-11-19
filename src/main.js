@@ -1,6 +1,6 @@
 // main.js COORDINA: collega i pezzi, non conosce i dettagli. Ordine di avvio in init().
-import { hydrate, getState, setState, saveProfile, subscribe } from './store.js';
-import { defaultMealId, todayKey } from './log.js';
+import { hydrate, getState, setState, saveProfile, subscribe, setViewedDay, getDayLog, isViewingToday } from './store.js';
+import { defaultMealId, firstEmptyMealId, todayKey } from './log.js';
 import { mountOnboarding } from './ui/onboarding.js';
 import { mountDashboard, renderDashboard } from './ui/dashboard.js';
 import { renderNav } from './ui/nav.js';
@@ -9,6 +9,8 @@ import { mountDiary, renderDiary } from './ui/diary.js';
 import { viewFromHash } from './router.js';
 import { mountMeals } from './ui/meals.js';
 import { mountFoodPanel, openFoodPanel } from './ui/foodPanel.js';
+import { mountNotices, renderNotices } from './ui/notices.js';
+import { requestPersistence } from './storage.js';
 
 const $ = id => document.getElementById(id);
 
@@ -17,6 +19,7 @@ let shownDay = todayKey(); // il giorno che la schermata sta mostrando
 function render(state) {
   shownDay = todayKey();
   const hasProfile = Boolean(state.profile);
+  renderNotices(state);                                  // avvisi: salvataggio non riuscito, suggerimento Home, promemoria backup
   $('onboarding-section').classList.toggle('hidden', hasProfile);
   $('app-section').classList.toggle('hidden', !hasProfile);
   if (!hasProfile) return;
@@ -61,7 +64,11 @@ function init() {
   mountFoodPanel();
   mountSettings();
   mountDiary();
-  $('add-food-button').addEventListener('click', () => openFoodPanel(defaultMealId()));
+  mountNotices();
+  // Oggi il "+" propone il pasto dell'ora; su un giorno passato l'ora non c'entra: il primo pasto ancora vuoto di quel giorno.
+  $('add-food-button').addEventListener('click', () => openFoodPanel(isViewingToday() ? defaultMealId() : firstEmptyMealId(getDayLog())));
+  // La tab Home vuol dire "oggi": toccarla riporta sempre al giorno corrente (un giorno passato si apre da Progressi).
+  document.querySelector('[data-nav="home"]').addEventListener('click', () => setViewedDay(null));
   window.addEventListener('hashchange', () => syncView());
   // App rimasta aperta (o in background) a cavallo della mezzanotte: tornando visibile, se il giorno è cambiato si ridisegna.
   document.addEventListener('visibilitychange', () => {
@@ -71,6 +78,9 @@ function init() {
   subscribe(render);                                                          // 3. ogni cambio di stato -> render
   render(getState());                                                         // 4. primo render
   registerServiceWorker();
+  // Chiede al browser di non cancellare i dati quando serve spazio. In background, solo con dati da proteggere (un profilo);
+  // si riprova a ogni avvio finché non è concesso (Chrome decide da solo, Firefox può chiedere un permesso).
+  if (getState().profile) requestPersistence();
 }
 
 init();

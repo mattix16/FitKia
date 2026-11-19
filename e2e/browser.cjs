@@ -128,7 +128,7 @@ const results = []; const ok = (label, cond, extra = '') => { results.push(cond)
   ok('grafico: 2 punti interattivi e 3 linee guida in kg', (await $('#weight-chart [data-point-date]').count()) === 2 && (await $('#weight-chart text').count()) === 3);
   await page.fill('#supplement-form [name=name]', 'Creatina'); await $('#supplement-form button[type=submit]').click();
   await $('#supplements-list input[type=checkbox]').check(); ok('integratore spuntato', await $('#supplements-list input[type=checkbox]').isChecked());
-  ok('storico: oggi, ieri, l\'altro ieri', (await $('#history-list li').count()) === 3);
+  ok('storico: sette colonne (una per giorno), ognuna apre il giorno', (await $('#history-list [data-day]').count()) === 7);
 
   // --- export / cancellazione / import
   await $('[data-nav=settings]').click(); await page.waitForSelector('[data-view=settings]', { state: 'visible' });

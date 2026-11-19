@@ -14,11 +14,14 @@ const PATHS = {
   weight: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 10a3.5 3.5 0 0 1 7 0"/><path d="M12 10l1.3-2"/>',
   water: '<path d="M12 3.5s6 6.3 6 10.6a6 6 0 0 1-12 0C6 9.8 12 3.5 12 3.5z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>',
   supplements: '<path d="M10.6 20.4a4.9 4.9 0 0 1-7-7l6.8-6.8a4.9 4.9 0 0 1 7 7z"/><path d="M7 10l7 7"/>',
+  // Avvisi (ui/notices.js)
+  backup: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  install: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',
 };
 
 /** Colore (token della palette) di ogni icona: come in Salute, ogni categoria ha la sua tinta pastello. */
 export const ICON_TONES = { breakfast: 'carbs', lunch: 'brand', dinner: 'protein', snack: 'fat', repeat: 'brand', log: 'brand',
-  weight: 'carbs', water: 'water', supplements: 'protein' };
+  weight: 'carbs', water: 'water', supplements: 'protein', backup: 'water', install: 'brand' };
 
 /** `<span class="tone-icon">` = quadratino tinto con il glifo. Il colore lo calcola il CSS da --tone (vedi index.html). */
 export function toneIcon(name, { size = 22, box = 'h-10 w-10 rounded-xl' } = {}) {

@@ -2,10 +2,10 @@ import { MEALS } from '../config.js';
 import { calculateTargets, calculateMacroTargets, ringDashArray, toPercent } from '../nutrition.js';
 import { dayTotals, emptyDay, todayKey, shiftDayKey, nextStep } from '../log.js';
 import { waterOn, waterGoalMl, isChecked, weightHistory } from '../habits.js';
-import { addWater, repeatYesterday, removeFood } from '../store.js';
+import { addWater, repeatPreviousDay, removeFood, setViewedDay } from '../store.js';
 import { renderMeals } from './meals.js';
 import { showUndo } from './toast.js';
-import { formatLiters, formatDecimal, formatFoodCount } from './format.js';
+import { formatLiters, formatDecimal, formatFoodCount, formatLongDate } from './format.js';
 import { toneIcon } from './icons.js';
 
 const $ = id => document.getElementById(id);
@@ -16,7 +16,6 @@ const swapClass = (el, condition, whenTrue, whenFalse) => {
   el.classList.toggle(whenTrue, condition);
   el.classList.toggle(whenFalse, !condition);
 };
-const dateFmt = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }); // creato una volta sola
 const mealLabel = id => MEALS.find(meal => meal.id === id).label;
 
 // Un array di dati + un solo template = niente markup copiato 3 volte. Le classi sono scritte INTERE (serve a Tailwind).
@@ -51,23 +50,31 @@ export function mountDashboard(onOpenMeal) {
     if (!step) return;
     const mealId = step.dataset.meal;
     if (step.dataset.step === 'log') return openPanel(mealId);
-    const copies = repeatYesterday(mealId);
+    const date = todayKey();                               // il suggerimento esiste solo per oggi
+    const copies = repeatPreviousDay(mealId, date);
     showUndo($('app-toast'), `${mealLabel(mealId)}: copiati ${formatFoodCount(copies.length)} di ieri`,
-      () => copies.forEach(copy => removeFood(mealId, copy.id)));
+      () => copies.forEach(copy => removeFood(mealId, copy.id, date)));
   });
+  $('day-banner-back').addEventListener('click', () => setViewedDay(null));
 }
 
 export function renderDashboard(state) {
   const { profile, habits } = state;
   const today = todayKey();
-  const day = state.logs[today] ?? emptyDay();
-  const yesterday = state.logs[shiftDayKey(today, -1)] ?? emptyDay();
+  const viewed = state.viewedDay ?? today;               // il giorno che la Home mostra (e modifica): oggi, o uno passato scelto in Progressi
+  const isToday = viewed === today;
+  const day = state.logs[viewed] ?? emptyDay();
+  const yesterday = state.logs[shiftDayKey(viewed, -1)] ?? emptyDay();   // "ieri" = il giorno prima di quello mostrato
   const totals = dayTotals(day);                         // "consumate" è DERIVATO dal diario, non un numero a parte
   const goal = calculateTargets(profile)[profile.goal];
   const eaten = totals.kcal;
   const over = eaten > goal;
 
-  setText('date-header', dateFmt.format(new Date()));
+  setText('date-header', formatLongDate(viewed));
+  // Giorno passato: striscia ben visibile ("Stai modificando...") e si nasconde ciò che riguarda solo OGGI (suggerimento, acqua, integratori, peso).
+  $('day-banner').classList.toggle('hidden', isToday);
+  if (!isToday) setText('day-banner-text', `Stai modificando ${formatLongDate(viewed)}`);
+  $('today-brief').classList.toggle('hidden', !isToday);
   setText('welcome-header', `Ciao, ${profile.name}`);     // textContent: il nome dell'utente non è mai HTML
   setText('kcal-goal', fmt.format(goal));
   setText('kcal-eaten', fmt.format(eaten));
@@ -82,7 +89,7 @@ export function renderDashboard(state) {
   swapClass($('kcal-remaining-label'), over, 'text-danger', 'text-muted');
 
   renderMacros(totals, calculateMacroTargets(goal, profile.weightKg));
-  renderMeals($('meal-list'), day, yesterday);
+  renderMeals($('meal-list'), day, yesterday, { isToday });
 
   // --- Oggi in breve
   const waterMl = waterOn(habits, today);
@@ -104,7 +111,7 @@ export function renderDashboard(state) {
   setText('home-weight-hint', hasWeightToday ? 'Oggi ✓' : 'Registra →');
 
   // --- Prossimo passo (uno solo, o nessuno)
-  const step = nextStep({ hour: new Date().getHours(), day, yesterday, waterMl, waterGoalMl: waterGoal, hasWeightToday, supplementsLeft });
+  const step = isToday ? nextStep({ hour: new Date().getHours(), day, yesterday, waterMl, waterGoalMl: waterGoal, hasWeightToday, supplementsLeft }) : null;
   const card = $('next-step');
   card.classList.toggle('hidden', !step);
   if (step) {

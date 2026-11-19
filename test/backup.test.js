@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { buildBackup, backupFileName, describeBackup } from '../src/backup.js';
 import { validateBackup } from '../src/validation.js';
 import { emptyHabits } from '../src/habits.js';
-import { BACKUP } from '../src/config.js';
+import { BACKUP, SCHEMA_VERSION } from '../src/config.js';
 
-const profile = { name: 'Mattia', age: 30, weightKg: 80, heightCm: 180, sex: 'male', goal: 'lose', activity: 'sedentary' };
+// Un profilo come lo salva l'app oggi: con peso obiettivo e ritmo (schema 2).
+const profile = { name: 'Mattia', age: 30, weightKg: 80, heightCm: 180, sex: 'male', goal: 'lose', activity: 'sedentary', targetWeightKg: null, weeklyRateKg: 0.5 };
 const entry = { id: 'e1', foodId: 'banana', name: 'Banana', grams: 120, kcal: 107, protein: 1.3, carbs: 27.6, fat: 0.4 };
 const state = {
   profile,
@@ -42,9 +43,27 @@ test('retrocompatibilità: un backup vecchio (senza goal/activity, customFoods, 
   const { ok, value } = validateBackup(old);   // accetta anche un oggetto già letto
   assert.equal(ok, true);
   assert.equal(value.profile.goal, 'lose');
+  assert.equal(value.profile.weeklyRateKg, 0.5);       // un backup di schema 1 non ha il ritmo: riceve quello predefinito
+  assert.equal(value.profile.targetWeightKg, null);
   assert.deepEqual(value.customFoods, []);
   assert.deepEqual(value.favorites, []);
   assert.deepEqual(value.habits, emptyHabits());
+});
+
+test('schema 2: il backup porta la versione corrente e peso obiettivo e ritmo tornano identici', () => {
+  const withTarget = { ...state, profile: { ...profile, goal: 'gain', targetWeightKg: 85.5, weeklyRateKg: 0.75 } };
+  const backup = buildBackup(withTarget);
+  assert.equal(backup.schema, SCHEMA_VERSION);
+  assert.equal(SCHEMA_VERSION, 2);
+  const { ok, value } = validateBackup(JSON.stringify(backup));
+  assert.equal(ok, true);
+  assert.deepEqual(value.profile, withTarget.profile);
+});
+
+test('peso obiettivo o ritmo fuori scala in un backup: rifiutato tutto', () => {
+  const bad = (patch) => validateBackup({ ...buildBackup(state), profile: { ...profile, ...patch } });
+  assert.ok(bad({ targetWeightKg: 5 }).errors.profile);
+  assert.ok(bad({ weeklyRateKg: 3 }).errors.profile);
 });
 
 test('file non validi: ok=false, value=null e un messaggio per sezione', () => {

@@ -1,6 +1,10 @@
-export const SCHEMA_VERSION = 1;
-export const STORAGE_KEYS = { profile: 'fitkia:v1:profile', logs: 'fitkia:v1:logs', habits: 'fitkia:v1:habits', customFoods: 'fitkia:v1:foods', favorites: 'fitkia:v1:favorites' };
-// Una chiave nuova = dati OPZIONALI: chi aggiorna l'app trova [] al posto dei preferiti e nient'altro cambia (SCHEMA_VERSION resta 1).
+// Versione della FORMA dei dati salvati. 2 = il profilo ha anche targetWeightKg e weeklyRateKg (passo 1 -> 2 in storage.js).
+// I campi opzionali che non cambiano la forma di ciò che c'è già NON alzano la versione (vedi `favorites` e `meta` sotto).
+export const SCHEMA_VERSION = 2;
+export const STORAGE_KEYS = { profile: 'fitkia:v1:profile', logs: 'fitkia:v1:logs', habits: 'fitkia:v1:habits', customFoods: 'fitkia:v1:foods', favorites: 'fitkia:v1:favorites',
+  meta: 'fitkia:v1:meta' };
+// Una chiave nuova = dati OPZIONALI: chi aggiorna l'app trova [] al posto dei preferiti (o i valori vuoti di `meta`) e nient'altro cambia (SCHEMA_VERSION resta 1).
+// `meta` = promemoria del dispositivo (ultimo backup, suggerimenti già chiusi): non fa parte del backup (vedi meta.js).
 
 export const SEX_OFFSET = { male: 5, female: -161 };                       // Mifflin-St Jeor
 export const ACTIVITY = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725 };
@@ -20,6 +24,17 @@ export const ACTIVITY_OPTIONS = [
 ];
 export const DEFAULT_SETTINGS = { goal: 'lose', activity: 'sedentary' };
 
+// Ritmo di peso: kg a settimana -> kcal al giorno. ~7700 kcal per kg è una regola pratica, una STIMA e non una prescrizione.
+// Gli id (0.25, 0.5, 0.75) si salvano nel profilo (weeklyRateKg); label e hint servono solo alla UI.
+export const KCAL_PER_KG = 7700;
+export const RATE_OPTIONS = [
+  { id: 0.25, label: 'Lento',  hint: '0,25 kg a settimana' },
+  { id: 0.5,  label: 'Medio',  hint: '0,5 kg a settimana' },
+  { id: 0.75, label: 'Veloce', hint: '0,75 kg a settimana' },
+];
+export const RATES = RATE_OPTIONS.map(option => option.id);          // derivato: non si può disallineare
+export const DEFAULT_RATE = { lose: 0.5, gain: 0.25 };               // ritmo proposto per obiettivo ('maintain' non ha ritmo)
+
 export const LIMITS = {                                                    // altezza in CM
   age: { min: 16, max: 100 },
   weightKg: { min: 30, max: 300 },
@@ -31,9 +46,20 @@ export const LIMITS = {                                                    // al
 };
 
 // Diario (M3)
-export const HISTORY_DAYS = 3;          // giorni di calorie mostrati nello storico
+export const HISTORY_DAYS = 7;          // giorni di calorie mostrati nella card "Ultimi 7 giorni"
+export const TARGET_BAND = { min: 0.85, max: 1.05 };   // "giorno in target" = kcal tra l'85% e il 105% dell'obiettivo
 export const WEIGHT_HISTORY_SHOWN = 7;  // pesi mostrati nell'elenco
-export const WEIGHT_CHART_POINTS = 30;  // ultimi pesi disegnati nel grafico
+// Periodi del grafico peso (giorni di CALENDARIO; null = tutto lo storico). L'id si salva in meta.weightRange.
+export const WEIGHT_RANGES = [
+  { id: '30', label: '30g', days: 30 },
+  { id: '90', label: '90g', days: 90 },
+  { id: 'all', label: 'Tutto', days: null },
+];
+export const DEFAULT_WEIGHT_RANGE = '30';
+export const WEIGHT_TREND_DAYS = 28;         // finestra con cui si misura il ritmo reale (kg a settimana)
+export const MIN_TREND_KG_PER_WEEK = 0.05;   // sotto questa velocità il trend è "fermo": non si stima una data
+export const MAX_ETA_WEEKS = 104;            // oltre 2 anni non si stima una data
+export const TARGET_SCALE_GAP_KG = 6;        // il peso obiettivo entra nella scala del grafico solo se dista meno di così dai dati
 export const MOVING_AVERAGE_DAYS = 7;   // finestra (giorni di CALENDARIO) della media mobile del peso
 export const WEIGHT_CHART = { width: 320, height: 150, padding: 30 }; // area SVG del grafico (viewBox); il margine sinistro ospita le etichette in kg
 export const MAX_SUPPLEMENTS = 10;
@@ -57,6 +83,11 @@ export const MEALS = [
   { id: 'dinner',    label: 'Cena',      empty: 'Aggiungi la cena' },
   { id: 'snack',     label: 'Snack',     empty: 'Aggiungi uno snack' },
 ];
+
+// Promemoria backup (meta.js): dopo quanti giorni si ricorda, per quanto si rimanda, e quanti giorni di diario servono per chiedere il primo.
+export const BACKUP_REMINDER_DAYS = 14;
+export const BACKUP_SNOOZE_DAYS = 3;
+export const BACKUP_MIN_DATA_DAYS = 3;
 
 // Backup (export/import). I limiti rifiutano file enormi o costruiti ad arte PRIMA che tocchino lo stato.
 export const BACKUP = {

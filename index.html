@@ -171,6 +171,19 @@
 
 <body class="bg-canvas text-ink font-sans antialiased tabular-nums">
 
+  <!-- AVVISO "salvataggio non riuscito": resta in cima finché i dati non si salvano di nuovo. Nel flusso (sticky), non copre il contenuto.
+       Lo gestisce ui/notices.js: compare quando lo stato ha saveFailed (quota piena, navigazione privata). -->
+  <div id="storage-alert" role="alert" class="sticky top-0 z-30 hidden px-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div class="mx-auto flex max-w-md flex-col gap-2 rounded-2xl bg-surface p-4 text-sm shadow-lg ring-1 ring-danger/40">
+      <p class="font-semibold text-danger">Non riesco a salvare i dati</p>
+      <p class="text-muted">La memoria del dispositivo è piena o stai navigando in privato: le ultime modifiche potrebbero andare perse. Scarica un backup per non perderle.</p>
+      <div class="flex flex-wrap gap-2">
+        <button id="storage-backup" type="button" class="btn-primary !w-auto px-4 !py-2 text-sm">Scarica backup</button>
+        <button id="storage-retry" type="button" class="btn-soft h-10 px-4 text-sm">Riprova</button>
+      </div>
+    </div>
+  </div>
+
   <!-- VISTA 1: onboarding. Parte nascosta: la mostra render() in main.js solo se manca il profilo -->
   <section id="onboarding-section" class="hidden mx-auto min-h-screen max-w-md px-5 pt-14 pb-10">
 
@@ -240,8 +253,18 @@
     </header>
 
     <main class="flex flex-col gap-5 px-4 pt-5">
+      <!-- Si sta guardando (e modificando) un giorno PASSATO, non oggi: lo dice in modo evidente (dashboard.js) -->
+      <section id="day-banner" role="status" class="hidden">
+        <div class="flex items-center justify-between gap-3 rounded-2xl bg-brand/15 px-4 py-3 ring-1 ring-brand/40">
+          <p id="day-banner-text" class="text-sm font-semibold text-deep"></p>
+          <button id="day-banner-back" type="button" class="btn-soft h-9 shrink-0 px-4 text-sm">Torna a oggi</button>
+        </div>
+      </section>
       <!-- Prossimo passo: UN suggerimento alla volta, scelto in base all'ora e a cosa manca oggi (dashboard.js) -->
       <section id="next-step" aria-live="polite" class="reveal hidden" style="--i:0"></section>
+
+      <!-- Avviso discreto: "Aggiungi alla Home" (iOS) oppure promemoria backup. Uno alla volta (ui/notices.js) -->
+      <section id="notice" aria-live="polite" class="reveal hidden" style="--i:0"></section>
 
       <!-- Card calorie -->
       <section aria-label="Calorie di oggi" class="reveal card flex items-center gap-6" style="--i:1">
@@ -270,8 +293,8 @@
       <!-- Macro e diario: il contenuto lo GENERA il JS da array di dati (niente markup copiato) -->
       <section id="macros" aria-label="Macronutrienti" class="reveal card flex gap-5" style="--i:2"></section>
 
-      <!-- Oggi in breve: acqua, integratori e peso a portata di pollice (i dettagli sono nel Diario) -->
-      <section aria-label="Oggi in breve" class="reveal grid grid-cols-3 gap-3" style="--i:3">
+      <!-- Oggi in breve: acqua, integratori e peso a portata di pollice (i dettagli sono in Progressi) -->
+      <section id="today-brief" aria-label="Oggi in breve" class="reveal grid grid-cols-3 gap-3" style="--i:3">
         <div class="hairline flex flex-col gap-2 rounded-2xl bg-surface p-4">
           <span class="flex flex-col items-start gap-2 text-xs font-medium text-muted"><span aria-hidden="true" class="tone-icon h-7 w-7 rounded-lg" style="--tone: var(--water)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5s6 6.3 6 10.6a6 6 0 0 1-12 0C6 9.8 12 3.5 12 3.5z"/></svg></span> Acqua</span>
           <span id="home-water" class="text-[17px] font-semibold leading-tight tabular-nums"></span>
@@ -300,11 +323,15 @@
 
     <!-- VISTA diario: abitudini e storico (M3). Ogni scheda si riempie in un passo successivo. -->
     <section data-view="diary" class="hidden px-4 pt-14">
-      <h1 class="px-1 text-[34px] font-bold leading-tight tracking-tight">Diario</h1>
+      <h1 class="px-1 text-[34px] font-bold leading-tight tracking-tight">Progressi</h1>
       <div class="mt-4 flex flex-col gap-4">
         <section id="history-card" aria-labelledby="history-title" class="reveal card" style="--i:1">
-          <h2 id="history-title" class="text-[17px] font-semibold tracking-tight">Ultimi 3 giorni</h2>
-          <ul id="history-list" class="mt-3 flex flex-col gap-3"></ul>
+          <h2 id="history-title" class="text-[17px] font-semibold tracking-tight">Ultimi 7 giorni</h2>
+          <p class="mt-0.5 text-xs text-muted">Tocca un giorno per aprirlo e registrarlo o correggerlo.</p>
+          <!-- Sette colonne, una per giorno, dalla più vecchia a oggi (ui/history.js): ognuna è un pulsante -->
+          <div id="history-list" class="mt-3 grid grid-cols-7 gap-1"></div>
+          <p id="history-summary" class="mt-3 text-sm font-semibold"></p>
+          <p class="mt-0.5 text-xs text-muted">Medie sui giorni completi: oggi è escluso.</p>
         </section>
         <section id="water-card" aria-labelledby="water-title" class="reveal card" style="--i:2">
           <h2 id="water-title" class="text-[17px] font-semibold tracking-tight">Acqua</h2>
@@ -332,6 +359,9 @@
               <figcaption id="weight-trend-title" class="text-sm font-semibold">Andamento</figcaption>
               <span id="weight-trend-summary" class="text-xs font-semibold text-deep"></span>
             </div>
+            <!-- Periodo del grafico: 30g / 90g / Tutto (i pulsanti li disegna ui/weight.js da config.js) -->
+            <div id="weight-range" role="group" aria-label="Periodo del grafico" class="flex gap-1 rounded-full bg-tint p-1"></div>
+            <p id="weight-goal-summary" class="text-xs font-semibold text-deep empty:hidden"></p>
             <div class="relative">
               <svg id="weight-chart" class="w-full overflow-visible" viewBox="0 0 320 150" role="group" aria-describedby="weight-chart-desc"></svg>
               <p id="weight-chart-empty" class="pointer-events-none absolute inset-0 hidden items-end justify-center px-6 pb-1 text-center text-sm text-muted"></p>
@@ -340,6 +370,7 @@
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted" aria-hidden="true">
               <span class="inline-flex items-center gap-1.5"><svg width="18" height="8"><line x1="1" y1="4" x2="17" y2="4" class="stroke-brand" stroke-width="2.5" stroke-linecap="round"/></svg>Peso</span>
               <span class="inline-flex items-center gap-1.5"><svg width="18" height="8"><line x1="1" y1="4" x2="17" y2="4" class="stroke-carbs" stroke-width="2" stroke-dasharray="4 3"/></svg>Media 7 giorni</span>
+              <span id="weight-legend-target" class="hidden items-center gap-1.5"><svg width="18" height="8"><line x1="1" y1="4" x2="17" y2="4" class="stroke-deep" stroke-width="1.5" stroke-dasharray="6 4"/></svg>Obiettivo</span>
             </div>
             <p id="weight-chart-readout" role="status" class="min-h-5 text-sm font-semibold"></p>
           </figure>
@@ -374,6 +405,18 @@
               <select name="activity" class="field-input" aria-describedby="activity-hint"></select>
               <span id="activity-hint" class="px-1 text-xs text-muted"></span>
             </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-sm font-medium">Peso obiettivo (kg) <span class="font-normal text-muted">· facoltativo</span></span>
+              <input name="targetWeightKg" type="number" step="0.1" inputmode="decimal" placeholder="Es. 72" class="field-input">
+            </label>
+            <!-- Il ritmo (kg a settimana) c'è solo se si dimagrisce o si ingrassa: lo nasconde ui/settings.js -->
+            <div id="rate-field">
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm font-medium">Ritmo</span>
+                <select name="weeklyRateKg" class="field-input" aria-describedby="rate-hint"></select>
+                <span id="rate-hint" class="px-1 text-xs text-muted"></span>
+              </label>
+            </div>
             <div class="rounded-2xl bg-tint px-4 py-3">
               <p class="text-xs font-medium text-muted">Obiettivo giornaliero attuale</p>
               <p id="goal-current" class="mt-0.5 text-sm font-semibold text-deep"></p>
@@ -410,6 +453,7 @@
         <section id="data-card" aria-labelledby="data-title" class="reveal card" style="--i:3">
           <h2 id="data-title" class="text-[17px] font-semibold tracking-tight">Backup e ripristino</h2>
           <p class="mt-1 text-sm text-muted">I dati restano solo su questo dispositivo. Salva un backup per non perderli o per passare a un altro telefono.</p>
+          <p id="last-backup" class="mt-1 text-xs font-semibold text-deep"></p>
           <div class="mt-4 flex flex-col gap-3">
             <button id="export-button" type="button" class="btn-primary inline-flex items-center justify-center gap-2">
               <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
@@ -439,7 +483,7 @@
       <div id="nav-tabs" class="liquid-glass pointer-events-auto grid flex-1 grid-cols-3 rounded-full p-[3px]">
         <span id="nav-lens" class="nav-lens" aria-hidden="true"></span>
         <a href="#home" data-nav="home" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="fill-when-active" d="M3.5 10.5L12 3.5l8.5 7V20a1 1 0 0 1-1 1h-4.5v-6h-6v6H4.5a1 1 0 0 1-1-1z"/></svg>Home</a>
-        <a href="#diary" data-nav="diary" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="fill-when-active" x="4.5" y="3" width="15" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Diario</a>
+        <a href="#diary" data-nav="diary" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="fill-when-active" x="4.5" y="3" width="15" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Progressi</a>
         <a href="#settings" data-nav="settings" class="nav-link relative z-10 flex h-11 flex-col items-center justify-center gap-px rounded-full text-[10px] font-medium text-muted"><svg aria-hidden="true" class="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle class="fill-when-active" cx="15" cy="6" r="2"/><circle class="fill-when-active" cx="9" cy="12" r="2"/><circle class="fill-when-active" cx="17" cy="18" r="2"/></svg>Impostazioni</a>
       </div>
       <button id="add-food-button" type="button" aria-label="Aggiungi alimento" class="liquid-glass add-action pointer-events-auto flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full text-deep">

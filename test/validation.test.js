@@ -27,6 +27,43 @@ test('un livello di attività non valido è un errore', () => {
   assert.ok(validateProfile({ ...ok, activity: '' }).errors.activity);
 });
 
+test('obiettivo: senza peso obiettivo e ritmo si usano i predefiniti (nessun obiettivo, ritmo dell\'obiettivo scelto)', () => {
+  assert.deepEqual(validateGoalSettings({ goal: 'lose', activity: 'light' }).value, { goal: 'lose', activity: 'light', targetWeightKg: null, weeklyRateKg: 0.5 });
+  assert.equal(validateGoalSettings({ goal: 'gain', activity: 'light' }).value.weeklyRateKg, 0.25);
+  assert.equal(validateGoalSettings({ goal: 'maintain', activity: 'light' }).value.weeklyRateKg, 0.5);     // valore neutro: 'maintain' non lo usa
+  assert.deepEqual(validateProfile(ok).value, { name: 'Mattia', age: 30, weightKg: 72.5, heightCm: 175, sex: 'male', goal: 'lose', activity: 'sedentary', targetWeightKg: null, weeklyRateKg: 0.5 });
+});
+
+test('peso obiettivo: facoltativo, virgola, un decimale e stessi limiti del peso', () => {
+  const base = { goal: 'lose', activity: 'light' };
+  assert.equal(validateGoalSettings({ ...base, targetWeightKg: '72,46' }).value.targetWeightKg, 72.5);
+  assert.equal(validateGoalSettings({ ...base, targetWeightKg: '  ' }).value.targetWeightKg, null);
+  for (const bad of ['5', '301', 'abc']) assert.ok(validateGoalSettings({ ...base, targetWeightKg: bad }).errors.targetWeightKg, bad);
+});
+
+test('peso obiettivo dalla parte giusta: sotto il peso per dimagrire, sopra per ingrassare (solo se si passa il peso attuale)', () => {
+  const check = (goal, target) => validateGoalSettings({ goal, activity: 'light', targetWeightKg: target }, { weightKg: 80 });
+  assert.ok(check('lose', '85').errors.targetWeightKg);
+  assert.ok(check('lose', '80').errors.targetWeightKg);
+  assert.equal(check('lose', '72').ok, true);
+  assert.ok(check('gain', '75').errors.targetWeightKg);
+  assert.equal(check('gain', '85').ok, true);
+  assert.equal(check('maintain', '90').ok, true);                                          // con "mantenere" il peso obiettivo non conta
+  assert.match(check('lose', '85').errors.targetWeightKg, /80/);                           // dice rispetto a quale peso
+  // onboarding, dati personali e backup non passano il peso: non devono fallire per un campo che non vedono
+  assert.equal(validateGoalSettings({ goal: 'lose', activity: 'light', targetWeightKg: '85' }).ok, true);
+  assert.equal(validateProfile({ ...ok, targetWeightKg: 90 }).ok, true);
+});
+
+test('ritmo: 0,25 / 0,5 / 0,75 (anche con la virgola); un altro valore è un errore', () => {
+  const base = { goal: 'lose', activity: 'light' };
+  assert.equal(validateGoalSettings({ ...base, weeklyRateKg: '0,75' }).value.weeklyRateKg, 0.75);
+  assert.equal(validateGoalSettings({ ...base, weeklyRateKg: 0.25 }).value.weeklyRateKg, 0.25);
+  assert.equal(validateGoalSettings({ ...base, weeklyRateKg: '' }).value.weeklyRateKg, 0.5);
+  for (const bad of ['0.4', '1', 'veloce', '-0.5']) assert.ok(validateGoalSettings({ ...base, weeklyRateKg: bad }).errors.weeklyRateKg, bad);
+  assert.ok(validateProfile({ ...ok, weeklyRateKg: '2' }).errors.weeklyRateKg);
+});
+
 test('peso del diario: virgola, arrotondamento e limiti', () => {
   assert.equal(validateWeightInput({ weightKg: '72,46' }).value.weightKg, 72.5);
   assert.ok(validateWeightInput({ weightKg: '' }).errors.weightKg);
