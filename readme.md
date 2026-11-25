@@ -41,7 +41,7 @@ Legenda: ✅ fatto · 🚧 in corso · ⬜ da fare
 - ✅ Affidabilità dei dati locali: migrazioni dello schema (`migrate()` in `storage.js`), avviso persistente se il salvataggio fallisce, promemoria del backup (mai fatto / oltre 14 giorni), richiesta di archiviazione persistente e suggerimento "Aggiungi alla Home" su Safari/iOS
 - ✅ Progressi (ex "Diario", la rotta resta `#diary`): ultimi 7 giorni con medie e giorni in target, registrazione e correzione dei giorni passati, grafico del peso con periodo 30g / 90g / Tutto
 - ✅ Peso obiettivo e ritmo settimanale (0,25 / 0,5 / 0,75 kg) che determina le calorie, con linea nel grafico e data stimata di arrivo
-- 🚧 Pacchetto Android (Capacitor): progetto pronto in `android/`, backup con il menu "Condividi", tasto indietro e icone; resta da provarlo su un telefono
+- ✅ Pacchetto Android (Capacitor): progetto pronto in `android/`, backup con il menu "Condividi", tasto indietro e icone; resta da provarlo su un telefono
 
 <Todo assignee="Mattia">
   Riordina le voci in base alle tue priorità e sposta in "Dopo l'MVP" ciò che non serve alla prima versione. Un MVP è la versione più piccola che sia *davvero utile a te*.
@@ -61,7 +61,7 @@ Legenda: ✅ fatto · 🚧 in corso · ⬜ da fare
 | Dati | `localStorage` (v1) → IndexedDB | Semplice all'inizio; migrabile perché isolato in `storage.js` |
 | Offline | Service Worker + Web App Manifest | Installabile e usabile senza rete |
 | Test | `node:test` | Zero dipendenze per la logica pura |
-| Android | Capacitor (più avanti) | Riusa la stessa web app in una WebView |
+| Android | Capacitor | Riusa la stessa web app in una WebView |
 
 ## Architettura
 
